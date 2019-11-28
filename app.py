@@ -27,19 +27,54 @@ SUMMARY_REPORT = {
 def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
     """ A CLI for comparing the commission files between two directories """
 
-    files_loankit = os.listdir(loankit_dir)
-    files_infynity = os.listdir(infynity_dir)
+    loankit_files = os.listdir(loankit_dir)
+    infynity_files = os.listdir(infynity_dir)
 
-    # print("Loankit commission files:")
-    # for filename in files_loankit:
-    #     print(filename)
+    invoices = {
+        INFYNITY: _read_files(infynity_dir, infynity_files),
+        LOANKIT: _read_files(loankit_dir, loankit_files)
+    }
 
-    # print("\n")
-    # print("Infynity commission files:")
-    # for filename in files_infynity:
-    #     print(filename)
+    keys_all = _merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
 
-    print(TaxInvoice(loankit_dir, files_loankit[0]).serialize())
+    for key in keys_all:
+        invoice_inf = invoices[INFYNITY].get(key, None)
+        invoice_lkt = invoices[LOANKIT].get(key, None)
+
+        # Chek if its possible to do a comparison
+        if invoice_inf is not None:
+            print('Not matching file for: ' + invoice_inf.get_full_path())
+            continue
+        if invoice_lkt is not None:
+            print('Not matching file for: ' + invoice_lkt.get_full_path())
+            continue
+
+
+
+        comparison = compare()
+
+
+
+
+
+    # print(invoices)
+
+
+def _merge_lists(l1: list, l2: list) -> list:
+    difference = list(set(l2) - set(l1))
+    return list(l1) + difference
+
+
+def _read_files(dir_: str, files: list) -> dict:
+    results = {}
+    for filename in files:
+        try:
+            ti = TaxInvoice(dir_, filename)
+            results[ti.key()] = ti
+        except IndexError:
+            # handle exception when there is a column missing in the file.
+            pass
+    return results
 
 
 def new_summary_row():
