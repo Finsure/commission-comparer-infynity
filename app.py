@@ -2,6 +2,7 @@ import os
 import click
 
 from src.model import TaxInvoice
+from src.utils import merge_lists
 
 
 # Constants
@@ -31,38 +32,26 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
     infynity_files = os.listdir(infynity_dir)
 
     invoices = {
-        INFYNITY: _read_files(infynity_dir, infynity_files),
-        LOANKIT: _read_files(loankit_dir, loankit_files)
+        LOANKIT: _read_files(loankit_dir, loankit_files),
+        INFYNITY: _read_files(infynity_dir, infynity_files)
     }
 
-    keys_all = _merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
+    keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
 
     for key in keys_all:
-        invoice_inf = invoices[INFYNITY].get(key, None)
         invoice_lkt = invoices[LOANKIT].get(key, None)
+        invoice_inf = invoices[INFYNITY].get(key, None)
+
+        results = []
 
         # Chek if its possible to do a comparison
-        if invoice_inf is not None:
-            print('Not matching file for: ' + invoice_inf.get_full_path())
-            continue
         if invoice_lkt is not None:
-            print('Not matching file for: ' + invoice_lkt.get_full_path())
-            continue
+            results.append(invoice_lkt.compare_to(invoice_inf, loose))
+        elif invoice_inf is not None:
+            results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-
-
-        comparison = compare()
-
-
-
-
-
+        print(results[-1])
     # print(invoices)
-
-
-def _merge_lists(l1: list, l2: list) -> list:
-    difference = list(set(l2) - set(l1))
-    return list(l1) + difference
 
 
 def _read_files(dir_: str, files: list) -> dict:

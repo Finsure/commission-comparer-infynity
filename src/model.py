@@ -1,7 +1,9 @@
 import copy
 import hashlib
+
 from bs4 import BeautifulSoup
 
+from src.utils import merge_lists
 
 ENCODING = 'utf-8'
 
@@ -21,7 +23,7 @@ class TaxInvoice:
         return self.directory + self.filename
 
     def get_file_text(self):
-        file = open(self.get_full_path, 'r')
+        file = open(self.get_full_path(), 'r')
         return file.read()
 
     def parse(self):
@@ -79,17 +81,17 @@ class TaxInvoice:
         header = soup.find('tr')  # Find header
         header.extract()  # Remove header
         table_rows = soup.find_all('tr')
-        rows = []
+        rows = {}
         for tr in table_rows:
             tds = tr.find_all('td')
             try:
                 row = InvoiceRow(tds[0].text, tds[1].text, tds[2].text,
                                  tds[3].text, tds[4].text, tds[5].text)
-                rows.append(row)
+                rows[row.key_full()] = row
             except IndexError:
                 row = InvoiceRow(tds[0].text, tds[1].text, '',
                                  tds[2].text, tds[3].text, tds[4].text)
-                rows.append(row)
+                rows[row.key_full()] = row
         return rows
 
     def key(self):
@@ -103,6 +105,53 @@ class TaxInvoice:
         serialized_obj = copy.copy(self.__dict__)
         self.filetext = text
         return serialized_obj
+
+    def compare_to(self, invoice, margin=0.0000001):  # noqa F821
+        result = result_invoice()
+        result['filename'] = self.filename
+
+        if invoice is None:
+            result['invoice'] = self.get_full_path()
+            return result
+
+        #  If we reached here it means the file has a pair
+        result['has_pair'] = True
+
+        # ensure these have been parsed
+        if len(self.rows) == 0:
+            self.parse()
+        if len(invoice.rows) == 0:
+            invoice.parse()
+
+        keys_all = merge_lists(self.rows.keys(), invoice.rows.keys())
+
+        result_rows = {}
+
+        for key in keys_all:
+            row_local = self.rows.get(key, None)
+            row_invoice = invoice.rows.get(key, None)
+
+            # If we couldnt find the row by the InvoiceRow.full_key() it means they are different
+            # so we try to locate them by the InvoiceRow.key()
+            if row_local is None:
+                for k in self.rows.keys():
+                    if self.rows.get(k, None).key() == row_invoice.key():
+                        row_local = self.rows[k]
+                        keys_all.remove(row_invoice.key_full())
+            elif row_invoice is None:
+                for k in invoice.rows.keys():
+                    if invoice.rows.get(k, None).key() == row_local.key():
+                        row_invoice = invoice.rows[k]
+                        keys_all.remove(row_local.key_full())
+
+            if row_local is not None:
+                result_rows[key] = row_local.compare_to(row_invoice)
+            else:
+                result_rows[key] = row_invoice.compare_to(row_local)
+
+        result['results_rows'] = result_rows
+
+        return result
 
     def _get_parts_info(self, soup: BeautifulSoup):
         body = soup.find('body')
@@ -151,6 +200,62 @@ class InvoiceRow:
             self._key_full = self.__generate_key_full()
         return self._key_full
 
+    def serialize(self):
+        return self.__dict__
+
+    def compare_to(self, row, margin=0.0000001):  # noqa F821
+        if row is None:
+            return {
+                'overall': False,
+                'commission_type': False,
+                'client': False,
+                'referrer': False,
+                'amount_paid': False,
+                'gst_paid': False,
+                'total': False
+            }
+        equal_commission_type = self.commission_type == row.commission_type
+        equal_client = self.client == row.client
+        equal_referrer = self.referrer == row.referrer
+        equal_amount_paid = self.amount_paid == row.amount_paid
+        equal_gst_paid = self.gst_paid == row.gst_paid
+        equal_total = self.total == row.total
+
+        # Recompare monetary values using the
+        if not equal_amount_paid:
+            equal_amount_paid = self.compare_numbers(self.amount_paid, row.amount_paid, margin)
+        if not equal_gst_paid:
+            equal_gst_paid = self.compare_numbers(self.gst_paid, row.gst_paid, margin)
+        if not equal_total:
+            equal_total = self.compare_numbers(self.total, row.total, margin)
+
+        overall = (equal_commission_type and equal_client and equal_referrer
+                   and equal_amount_paid and equal_gst_paid and equal_total)
+
+        return {
+            'overall': overall,
+            'commission_type': equal_commission_type,
+            'client': equal_client,
+            'referrer': equal_referrer,
+            'amount_paid': equal_amount_paid,
+            'gst_paid': equal_gst_paid,
+            'total': equal_total
+        }
+
+    def compare_numbers(self, n1, n2, margin):
+        n1val = n1
+        n2val = n2
+
+        if n1 or n2 == '':
+            return False
+
+        if type(n1) == str:
+            n1val = float(n1[-1:])  # remove $
+        if type(n2) == str:
+            n2val = float(n2[-1:])  # remove $
+
+        return abs(n1val - n2val) <= margin
+
     def __generate_key(self):
         sha = hashlib.sha256()
         sha.update(self.commission_type.encode(ENCODING))
@@ -168,5 +273,16 @@ class InvoiceRow:
         sha.update(self.total.encode(ENCODING))
         return sha.hexdigest()
 
-    def serialize(self):
-        return self.__dict__
+
+def result_invoice():
+    return {
+        'filename': '',
+        'has_pair': False,
+        'results_rows': '',
+    }
+
+
+def result_row():
+    return {
+
+    }
