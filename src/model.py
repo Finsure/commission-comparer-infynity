@@ -1,6 +1,7 @@
 import copy
 import hashlib
 
+import xlsxwriter
 from bs4 import BeautifulSoup
 
 from src.utils import merge_lists
@@ -15,6 +16,8 @@ class TaxInvoice:
         self.filename = filename
         self.filetext = self.get_file_text()
         self.parse()
+
+        self.pair = None
 
         self._key = None
 
@@ -109,15 +112,43 @@ class TaxInvoice:
     def compare_to(self, invoice, margin=0.0000001):  # noqa F821
         result = result_invoice()
         result['filename'] = self.filename
-
+        result['file'] = self.get_full_path()
         if invoice is None:
-            result['invoice'] = self.get_full_path()
             return result
 
         #  If we reached here it means the file has a pair
         result['has_pair'] = True
+        result['equal_from'] = self._from == invoice._from
+        result['equal_from_abn'] = self.from_abn == invoice.from_abn
+        result['equal_to'] = self.to == invoice.to
+        result['equal_to_abn'] = self.to_abn == invoice.to_abn
+        result['equal_bsb'] = self.bsb == invoice.bsb
+        result['equal_account'] = self.account == invoice.account
+        result['equal_final_total'] = self.final_total == invoice.final_total
+        result['equal_amount_rows'] = len(self.rows) == len(invoice.rows)
 
-        # ensure these have been parsed
+        # Results values for display purposes
+        result['from_value_1'] = self._from
+        result['from_value_2'] = invoice._from
+        result['from_abn_value_1'] = self.from_abn
+        result['from_abn_value_2'] = invoice.from_abn
+        result['to_value_1'] = self.to
+        result['to_value_2'] = invoice.to
+        result['to_abn_value_1'] = self.to_abn
+        result['to_abn_value_2'] = invoice.to_abn
+        result['bsb_value_1'] = self.bsb
+        result['bsb_value_2'] = invoice.bsb
+        result['account_value_1'] = self.account
+        result['account_value_2'] = invoice.account
+        result['final_total_value_1'] = self.final_total
+        result['final_total_value_2'] = invoice.final_total
+
+        result['overall'] = (result['equal_from'] and result['equal_from_abn']
+                             and result['equal_to'] and result['equal_to_abn']
+                             and result['equal_bsb'] and result['equal_account']
+                             and result['equal_final_total'] and result['equal_amount_rows'])
+
+        # ensure both have been parsed
         if len(self.rows) == 0:
             self.parse()
         if len(invoice.rows) == 0:
@@ -135,12 +166,12 @@ class TaxInvoice:
             # so we try to locate them by the InvoiceRow.key()
             if row_local is None:
                 for k in self.rows.keys():
-                    if self.rows.get(k, None).key() == row_invoice.key():
+                    if self.rows.get(k).key() == row_invoice.key():
                         row_local = self.rows[k]
                         keys_all.remove(row_invoice.key_full())
             elif row_invoice is None:
                 for k in invoice.rows.keys():
-                    if invoice.rows.get(k, None).key() == row_local.key():
+                    if invoice.rows.get(k).key() == row_local.key():
                         row_invoice = invoice.rows[k]
                         keys_all.remove(row_local.key_full())
 
@@ -150,6 +181,9 @@ class TaxInvoice:
                 result_rows[key] = row_invoice.compare_to(row_local)
 
         result['results_rows'] = result_rows
+
+        for key in result['results_rows'].keys():
+            result['overall'] = result['overall'] and result['results_rows'][key]['overall']
 
         return result
 
@@ -214,6 +248,7 @@ class InvoiceRow:
                 'gst_paid': False,
                 'total': False
             }
+
         equal_commission_type = self.commission_type == row.commission_type
         equal_client = self.client == row.client
         equal_referrer = self.referrer == row.referrer
@@ -277,12 +312,139 @@ class InvoiceRow:
 def result_invoice():
     return {
         'filename': '',
+        'file': '',
         'has_pair': False,
-        'results_rows': '',
+        'equal_from': False,
+        'equal_from_abn': False,
+        'equal_to': False,
+        'equal_to_abn': False,
+        'equal_bsb': False,
+        'equal_account': False,
+        'equal_final_total': False,
+        'equal_amount_rows': False,
+        'overall': False,
+        'results_rows': [],
+        'from_value_1': '',
+        'from_value_2': '',
+        'from_abn_value_1': '',
+        'from_abn_value_2': '',
+        'to_value_1': '',
+        'to_value_2': '',
+        'to_abn_value_1': '',
+        'to_abn_value_2': '',
+        'bsb_value_1': '',
+        'bsb_value_2': '',
+        'account_value_1': '',
+        'account_value_2': '',
+        'final_total_value_1': '',
+        'final_total_value_2': ''
     }
 
 
-def result_row():
+def new_error(file, msg, line='', first_value_1='', first_value_2='', second_value_1='',
+              second_value_2='', third_value_1='', third_value_2=''):
     return {
-
+        'file': file,
+        'msg': msg,
+        'line': line,
+        'first_value_1': first_value_1,
+        'first_value_2': first_value_2,
+        'second_value_1': second_value_1,
+        'second_value_2': second_value_2,
+        'third_value_1': third_value_1,
+        'third_value_2': third_value_2
     }
+
+
+def create_summary(results: list):
+    workbook = xlsxwriter.Workbook('referrer_rcti_summary.xlsx')
+    worksheet = workbook.add_worksheet('Summary')
+
+    row = 0
+    col = 0
+
+    worksheet.write(row, col, 'Commission Referrer RCTI Summary')
+    row += 2
+
+    list_errors = []
+    for result in results:
+        if result['overall'] is False:  # it means there is an issue
+            file = result['file']
+
+            # Error when the file doesnt have a pair
+            if not result['has_pair']:
+                msg = 'No corresponding commission file found'
+                error = new_error(file, msg)
+                list_errors.append(error)
+                continue
+
+            # From does not match
+            if not result['equal_from']:
+                error['msg'] = 'From name does not match'
+                error = new_error(file, msg, '', result['from_value_1'], result['from_value_2'])
+                list_errors.append(error)
+
+            # From ABN does not match
+            if not result['equal_from_abn']:
+                msg = 'From ABN does not match'
+                error = new_error(file, msg, '', result['from_abn_value_1'], result['from_abn_value_2'])
+                list_errors.append(error)
+
+            # To does not match
+            if not result['equal_to']:
+                msg = 'To name does not match'
+                error = new_error(file, msg, '', result['to_value_1'], result['to_value_2'])
+                list_errors.append(error)
+
+            # To ABN does not match
+            if not result['equal_to_abn']:
+                msg = 'To ABN does not match'
+                error = new_error(file, msg, '', result['to_abn_value_1'], result['to_abn_value_2'])
+                list_errors.append(error)
+
+            # BSB does not match
+            if not result['equal_bsb']:
+                msg = 'BSB does not match'
+                error = new_error(file, msg, '', result['bsb_value_1'], result['bsb_value_2'])
+                list_errors.append(error)
+
+            # Account does not match
+            if not result['equal_account']:
+                msg = 'Account number does not match'
+                error = new_error(file, msg, '', result['account_value_1'], result['account_value_2'])
+                list_errors.append(error)
+
+            # Total does not match
+            if not result['equal_final_total']:
+                msg = 'Total does not match'
+                error = new_error(file, msg, '', result['final_total_value_1'], result['final_total_value_2'])
+                list_errors.append(error)
+
+            # TODO: Find errors in rows
+
+    # Write summary header
+    worksheet.write(row, col, 'File')
+    worksheet.write(row, col + 1, 'Message')
+    worksheet.write(row, col + 2, 'Line')
+    worksheet.write(row, col + 3, 'First Value')
+    worksheet.write(row, col + 4, 'First To Compare')
+    worksheet.write(row, col + 5, 'Second Value')
+    worksheet.write(row, col + 6, 'Second To Compare')
+    worksheet.write(row, col + 7, 'Third Value')
+    worksheet.write(row, col + 8, 'Third To Compare')
+    row += 1
+
+    # Write errors
+    for error in list_errors:
+        worksheet.write(row, col, error['file'])
+        worksheet.write(row, col + 1, error['msg'])
+        worksheet.write(row, col + 2, error['line'])
+        worksheet.write(row, col + 3, error['first_value_1'])
+        worksheet.write(row, col + 4, error['first_value_2'])
+        worksheet.write(row, col + 5, error['second_value_1'])
+        worksheet.write(row, col + 6, error['second_value_2'])
+        worksheet.write(row, col + 7, error['third_value_1'])
+        worksheet.write(row, col + 8, error['third_value_2'])
+        row += 1
+
+    workbook.close()

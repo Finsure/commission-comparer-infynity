@@ -1,7 +1,8 @@
 import os
+
 import click
 
-from src.model import TaxInvoice
+from src.model import TaxInvoice, create_summary
 from src.utils import merge_lists
 
 
@@ -38,11 +39,11 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
 
     keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
 
+    results = []
+
     for key in keys_all:
         invoice_lkt = invoices[LOANKIT].get(key, None)
         invoice_inf = invoices[INFYNITY].get(key, None)
-
-        results = []
 
         # Chek if its possible to do a comparison
         if invoice_lkt is not None:
@@ -50,8 +51,7 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-        print(results[-1])
-    # print(invoices)
+    create_summary(results)
 
 
 def _read_files(dir_: str, files: list) -> dict:
