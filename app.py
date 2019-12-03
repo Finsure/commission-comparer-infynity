@@ -51,6 +51,7 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
+    # print(results)
     create_summary(results)
 
 

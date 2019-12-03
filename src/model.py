@@ -17,8 +17,6 @@ class TaxInvoice:
         self.filetext = self.get_file_text()
         self.parse()
 
-        self.pair = None
-
         self._key = None
 
     def get_full_path(self):
@@ -84,16 +82,20 @@ class TaxInvoice:
         header = soup.find('tr')  # Find header
         header.extract()  # Remove header
         table_rows = soup.find_all('tr')
+        row_number = 0
         rows = {}
         for tr in table_rows:
+            row_number += 1
             tds = tr.find_all('td')
             try:
                 row = InvoiceRow(tds[0].text, tds[1].text, tds[2].text,
-                                 tds[3].text, tds[4].text, tds[5].text)
+                                 tds[3].text, tds[4].text, tds[5].text, row_number)
                 rows[row.key_full()] = row
-            except IndexError:
+            except IndexError as e:
+                # print(self.filename)
+                # print("NO REFERRER ERROR: " + str(e))
                 row = InvoiceRow(tds[0].text, tds[1].text, '',
-                                 tds[2].text, tds[3].text, tds[4].text)
+                                 tds[2].text, tds[3].text, tds[4].text, row_number)
                 rows[row.key_full()] = row
         return rows
 
@@ -161,6 +163,7 @@ class TaxInvoice:
         for key in keys_all:
             row_local = self.rows.get(key, None)
             row_invoice = invoice.rows.get(key, None)
+            use_key = key
 
             # If we couldnt find the row by the InvoiceRow.full_key() it means they are different
             # so we try to locate them by the InvoiceRow.key()
@@ -168,17 +171,19 @@ class TaxInvoice:
                 for k in self.rows.keys():
                     if self.rows.get(k).key() == row_invoice.key():
                         row_local = self.rows[k]
-                        keys_all.remove(row_invoice.key_full())
+                        keys_all.remove(row_local.key_full())
+                        use_key = k
             elif row_invoice is None:
                 for k in invoice.rows.keys():
                     if invoice.rows.get(k).key() == row_local.key():
                         row_invoice = invoice.rows[k]
-                        keys_all.remove(row_local.key_full())
+                        keys_all.remove(row_invoice.key_full())
+                        use_key = k
 
             if row_local is not None:
-                result_rows[key] = row_local.compare_to(row_invoice)
+                result_rows[use_key] = row_local.compare_to(row_invoice)
             else:
-                result_rows[key] = row_invoice.compare_to(row_local)
+                result_rows[use_key] = row_invoice.compare_to(row_local)
 
         result['results_rows'] = result_rows
 
@@ -213,13 +218,14 @@ class TaxInvoice:
 
 class InvoiceRow:
 
-    def __init__(self, commission_type, client, referrer, amount_paid, gst_paid, total):
+    def __init__(self, commission_type, client, referrer, amount_paid, gst_paid, total, row_number):
         self.commission_type = commission_type
         self.client = client
         self.referrer = referrer
         self.amount_paid = amount_paid
         self.gst_paid = gst_paid
         self.total = total
+        self.row_number = row_number
 
         self._key = None
         self._key_full = None
@@ -238,16 +244,12 @@ class InvoiceRow:
         return self.__dict__
 
     def compare_to(self, row, margin=0.0000001):  # noqa F821
+        result = result_row()
+        result['row_number'] = self.row_number
         if row is None:
-            return {
-                'overall': False,
-                'commission_type': False,
-                'client': False,
-                'referrer': False,
-                'amount_paid': False,
-                'gst_paid': False,
-                'total': False
-            }
+            return result
+
+        result['has_pair'] = True
 
         equal_commission_type = self.commission_type == row.commission_type
         equal_client = self.client == row.client
@@ -264,18 +266,30 @@ class InvoiceRow:
         if not equal_total:
             equal_total = self.compare_numbers(self.total, row.total, margin)
 
-        overall = (equal_commission_type and equal_client and equal_referrer
-                   and equal_amount_paid and equal_gst_paid and equal_total)
+        overall = equal_amount_paid and equal_gst_paid and equal_total
+        # and equal_commission_type and equal_client and equal_referrer)
 
-        return {
-            'overall': overall,
-            'commission_type': equal_commission_type,
-            'client': equal_client,
-            'referrer': equal_referrer,
-            'amount_paid': equal_amount_paid,
-            'gst_paid': equal_gst_paid,
-            'total': equal_total
-        }
+        result['commission_type_value_1'] = self.commission_type
+        result['commission_type_value_2'] = row.commission_type
+        result['client_value_1'] = self.client
+        result['client_value_2'] = row.client
+        result['referrer_value_1'] = self.referrer
+        result['referrer_value_1'] = row.referrer
+        result['amount_paid_value_1'] = self.amount_paid
+        result['amount_paid_value_2'] = row.amount_paid
+        result['gst_paid_value_1'] = self.gst_paid
+        result['gst_paid_value_2'] = row.gst_paid
+        result['total_value_1'] = self.total
+        result['total_value_2'] = row.total
+        result['overall'] = overall
+        result['commission_type'] = equal_commission_type
+        result['client'] = equal_client
+        result['referrer'] = equal_referrer
+        result['amount_paid'] = equal_amount_paid
+        result['gst_paid'] = equal_gst_paid
+        result['total'] = equal_total
+
+        return result
 
     def compare_numbers(self, n1, n2, margin):
         n1val = n1
@@ -341,6 +355,32 @@ def result_invoice():
     }
 
 
+def result_row():
+    return {
+        'overall': False,
+        'has_pair': False,
+        'commission_type': False,
+        'client': False,
+        'referrer': False,
+        'amount_paid': False,
+        'gst_paid': False,
+        'total': False,
+        'row_number': 0,
+        'commission_type_value_1': '',
+        'commission_type_value_2': '',
+        'client_value_1': '',
+        'client_value_2': '',
+        'referrer_value_1': '',
+        'referrer_value_2': '',
+        'amount_paid_value_1': '',
+        'amount_paid_value_2': '',
+        'gst_paid_value_1': '',
+        'gst_paid_value_2': '',
+        'total_value_1': '',
+        'total_value_2': ''
+    }
+
+
 def new_error(file, msg, line='', first_value_1='', first_value_2='', second_value_1='',
               second_value_2='', third_value_1='', third_value_2=''):
     return {
@@ -356,6 +396,7 @@ def new_error(file, msg, line='', first_value_1='', first_value_2='', second_val
     }
 
 
+# This function is ugly as shit. We must figure out a better design to simplify things.
 def create_summary(results: list):
     workbook = xlsxwriter.Workbook('referrer_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
@@ -420,7 +461,33 @@ def create_summary(results: list):
                 error = new_error(file, msg, '', result['final_total_value_1'], result['final_total_value_2'])
                 list_errors.append(error)
 
-            # TODO: Find errors in rows
+            for key in result['results_rows'].keys():
+                result_row = result['results_rows'][key]
+                if result_row['overall'] is False:  # it means there is an issue
+
+                    if not result_row['has_pair']:
+                        msg = 'No corresponding row in comission file.'
+                        error = new_error(file, msg, '')  # TODO: Include row number
+                        list_errors.append(error)
+                        continue
+
+                    values_list = safelist([])
+                    if not result_row['amount_paid']:
+                        values_list.append(result_row['amount_paid_value_1'])
+                        values_list.append(result_row['amount_paid_value_2'])
+                    if not result_row['gst_paid']:
+                        values_list.append(result_row['gst_paid_value_1'])
+                        values_list.append(result_row['gst_paid_value_2'])
+                    if not result_row['total']:
+                        values_list.append(result_row['total_value_1'])
+                        values_list.append(result_row['total_value_2'])
+
+                    msg = 'Values not match'
+                    error = new_error(file, msg, result_row['row_number'], values_list.get(0, ''),
+                                      values_list.get(1, ''), values_list.get(2, ''),
+                                      values_list.get(3, ''), values_list.get(4, ''),
+                                      values_list.get(5, ''))
+                    list_errors.append(error)
 
     # Write summary header
     worksheet.write(row, col, 'File')
@@ -448,3 +515,11 @@ def create_summary(results: list):
         row += 1
 
     workbook.close()
+
+
+class safelist(list):
+    def get(self, index, default=None):
+        try:
+            return self.__getitem__(index)
+        except IndexError:
+            return default
