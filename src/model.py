@@ -91,9 +91,7 @@ class TaxInvoice:
                 row = InvoiceRow(tds[0].text, tds[1].text, tds[2].text,
                                  tds[3].text, tds[4].text, tds[5].text, row_number)
                 rows[row.key_full()] = row
-            except IndexError as e:
-                # print(self.filename)
-                # print("NO REFERRER ERROR: " + str(e))
+            except IndexError:
                 row = InvoiceRow(tds[0].text, tds[1].text, '',
                                  tds[2].text, tds[3].text, tds[4].text, row_number)
                 rows[row.key_full()] = row
@@ -111,44 +109,54 @@ class TaxInvoice:
         self.filetext = text
         return serialized_obj
 
+    # Man I hope I never need to maintain this!!! Such an ugly code written by me.
     def compare_to(self, invoice, margin=0.0000001):  # noqa F821
         result = result_invoice()
         result['filename'] = self.filename
         result['file'] = self.get_full_path()
-        if invoice is None:
-            return result
 
+        has_pair = invoice is not None
         #  If we reached here it means the file has a pair
-        result['has_pair'] = True
-        result['equal_from'] = self._from == invoice._from
-        result['equal_from_abn'] = self.from_abn == invoice.from_abn
-        result['equal_to'] = self.to == invoice.to
-        result['equal_to_abn'] = self.to_abn == invoice.to_abn
-        result['equal_bsb'] = self.bsb == invoice.bsb
-        result['equal_account'] = self.account == invoice.account
-        result['equal_final_total'] = self.final_total == invoice.final_total
-        result['equal_amount_rows'] = len(self.rows) == len(invoice.rows)
+        result['has_pair'] = has_pair
+        if has_pair:
+            result['equal_from'] = self._from == invoice._from
+            result['equal_from_abn'] = self.from_abn == invoice.from_abn
+            result['equal_to'] = self.to == invoice.to
+            result['equal_to_abn'] = self.to_abn == invoice.to_abn
+            result['equal_bsb'] = self.bsb == invoice.bsb
+            result['equal_account'] = self.account == invoice.account
+            result['equal_final_total'] = self.final_total == invoice.final_total
+            result['equal_amount_rows'] = len(self.rows) == len(invoice.rows)
 
         # Results values for display purposes
         result['from_value_1'] = self._from
-        result['from_value_2'] = invoice._from
         result['from_abn_value_1'] = self.from_abn
-        result['from_abn_value_2'] = invoice.from_abn
         result['to_value_1'] = self.to
-        result['to_value_2'] = invoice.to
         result['to_abn_value_1'] = self.to_abn
-        result['to_abn_value_2'] = invoice.to_abn
         result['bsb_value_1'] = self.bsb
-        result['bsb_value_2'] = invoice.bsb
         result['account_value_1'] = self.account
-        result['account_value_2'] = invoice.account
         result['final_total_value_1'] = self.final_total
-        result['final_total_value_2'] = invoice.final_total
+        if has_pair:
+            result['from_value_2'] = invoice._from
+            result['from_abn_value_2'] = invoice.from_abn
+            result['to_value_2'] = invoice.to
+            result['to_abn_value_2'] = invoice.to_abn
+            result['bsb_value_2'] = invoice.bsb
+            result['account_value_2'] = invoice.account
+            result['final_total_value_2'] = invoice.final_total
 
         result['overall'] = (result['equal_from'] and result['equal_from_abn']
                              and result['equal_to'] and result['equal_to_abn']
                              and result['equal_bsb'] and result['equal_account']
                              and result['equal_final_total'] and result['equal_amount_rows'])
+
+        if not has_pair:
+            result_rows = {}
+            for key in self.rows.keys():
+                row_local = self.rows[key]
+                result_rows[key] = row_local.compare_to(None)
+            result['results_rows'] = result_rows
+            return result
 
         # ensure both have been parsed
         if len(self.rows) == 0:
@@ -181,9 +189,9 @@ class TaxInvoice:
                         use_key = k
 
             if row_local is not None:
-                result_rows[use_key] = row_local.compare_to(row_invoice)
+                result_rows[use_key] = row_local.compare_to(row_invoice, margin, False)
             else:
-                result_rows[use_key] = row_invoice.compare_to(row_local)
+                result_rows[use_key] = row_invoice.compare_to(row_local, margin, True)
 
         result['results_rows'] = result_rows
 
@@ -243,51 +251,56 @@ class InvoiceRow:
     def serialize(self):
         return self.__dict__
 
-    def compare_to(self, row, margin=0.0000001):  # noqa F821
+    def compare_to(self, row, margin=0.0000001, reverse=True):  # noqa F821
         result = result_row()
         result['row_number'] = self.row_number
-        if row is None:
-            return result
 
-        result['has_pair'] = True
+        has_pair = row is not None
+        result['has_pair'] = has_pair
 
-        equal_commission_type = self.commission_type == row.commission_type
-        equal_client = self.client == row.client
-        equal_referrer = self.referrer == row.referrer
-        equal_amount_paid = self.amount_paid == row.amount_paid
-        equal_gst_paid = self.gst_paid == row.gst_paid
-        equal_total = self.total == row.total
+        equal_amount_paid = False
+        equal_gst_paid = False
+        equal_total = False
+        if has_pair:
+            equal_amount_paid = self.amount_paid == row.amount_paid
+            equal_gst_paid = self.gst_paid == row.gst_paid
+            equal_total = self.total == row.total
 
-        # Recompare monetary values using the
-        if not equal_amount_paid:
-            equal_amount_paid = self.compare_numbers(self.amount_paid, row.amount_paid, margin)
-        if not equal_gst_paid:
-            equal_gst_paid = self.compare_numbers(self.gst_paid, row.gst_paid, margin)
-        if not equal_total:
-            equal_total = self.compare_numbers(self.total, row.total, margin)
+            # Recompare monetary values using the
+            if not equal_amount_paid:
+                equal_amount_paid = self.compare_numbers(self.amount_paid, row.amount_paid, margin)
+            if not equal_gst_paid:
+                equal_gst_paid = self.compare_numbers(self.gst_paid, row.gst_paid, margin)
+            if not equal_total:
+                equal_total = self.compare_numbers(self.total, row.total, margin)
 
         overall = equal_amount_paid and equal_gst_paid and equal_total
         # and equal_commission_type and equal_client and equal_referrer)
 
-        result['commission_type_value_1'] = self.commission_type
-        result['commission_type_value_2'] = row.commission_type
-        result['client_value_1'] = self.client
-        result['client_value_2'] = row.client
-        result['referrer_value_1'] = self.referrer
-        result['referrer_value_1'] = row.referrer
-        result['amount_paid_value_1'] = self.amount_paid
-        result['amount_paid_value_2'] = row.amount_paid
-        result['gst_paid_value_1'] = self.gst_paid
-        result['gst_paid_value_2'] = row.gst_paid
-        result['total_value_1'] = self.total
-        result['total_value_2'] = row.total
+        first = '1'
+        second = '2'
+        if reverse:
+            first = '2'
+            second = '1'
+
         result['overall'] = overall
-        result['commission_type'] = equal_commission_type
-        result['client'] = equal_client
-        result['referrer'] = equal_referrer
         result['amount_paid'] = equal_amount_paid
         result['gst_paid'] = equal_gst_paid
         result['total'] = equal_total
+        result['commission_type_value_' + first] = self.commission_type
+        result['client_value_' + first] = self.client
+        result['referrer_value_' + first] = self.referrer
+        result['amount_paid_value_' + first] = self.amount_paid
+        result['gst_paid_value_' + first] = self.gst_paid
+        result['total_value_' + first] = self.total
+
+        if has_pair:
+            result['commission_type_value_' + second] = row.commission_type
+            result['client_value_' + second] = row.client
+            result['referrer_value_' + second] = row.referrer
+            result['amount_paid_value_' + second] = row.amount_paid
+            result['gst_paid_value_' + second] = row.gst_paid
+            result['total_value_' + second] = row.total
 
         return result
 
@@ -337,7 +350,7 @@ def result_invoice():
         'equal_final_total': False,
         'equal_amount_rows': False,
         'overall': False,
-        'results_rows': [],
+        'results_rows': {},
         'from_value_1': '',
         'from_value_2': '',
         'from_abn_value_1': '',
@@ -513,6 +526,129 @@ def create_summary(results: list):
         worksheet.write(row, col + 7, error['third_value_1'])
         worksheet.write(row, col + 8, error['third_value_2'])
         row += 1
+
+    workbook.close()
+
+
+def create_all_datailed_report(results: list):
+    for result in results:
+        create_detailed_report(result)
+
+
+# I promise there was no other way! :(
+def create_detailed_report(result: dict):
+    # If there is no error we dont need to generate this report.
+    if result['overall']:
+        return
+
+    workbook = xlsxwriter.Workbook('DETAILED_' + result['filename'] + '.xlsx')
+    worksheet = workbook.add_worksheet('Detailed')
+
+    fmt_error = workbook.add_format({'font_color': 'red'})
+    fmt_bold = workbook.add_format({'bold': True})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
+                                            'bg_color': 'black'})
+
+    row = 0
+    col = 0
+    comparison_col = 8
+
+    worksheet.merge_range('A1:N1', result['filename'])
+    row += 2
+
+    format_ = fmt_error if not result['equal_from'] else None
+    worksheet.write(row, col, 'From', fmt_bold)
+    worksheet.write(row, col + 1, result['from_value_1'], format_)
+    worksheet.write(row, comparison_col, 'From', fmt_bold)
+    worksheet.write(row, comparison_col + 1, result['from_value_2'], format_)
+
+    row += 1
+
+    format_ = fmt_error if not result['equal_from_abn'] else None
+    worksheet.write(row, col, 'From ABN', fmt_bold)
+    worksheet.write(row, col + 1, result['from_abn_value_1'], format_)
+    worksheet.write(row, comparison_col, 'From ABN', fmt_bold)
+    worksheet.write(row, comparison_col + 1, result['from_abn_value_2'], format_)
+
+    row += 1
+
+    format_ = fmt_error if not result['equal_to'] else None
+    worksheet.write(row, col, 'To', fmt_bold)
+    worksheet.write(row, col + 1, result['to_value_1'], format_)
+    worksheet.write(row, comparison_col, 'To', fmt_bold)
+    worksheet.write(row, comparison_col + 1, result['to_value_2'], format_)
+
+    row += 1
+
+    format_ = fmt_error if not result['equal_to_abn'] else None
+    worksheet.write(row, col, 'To ABN', fmt_bold)
+    worksheet.write(row, col + 1, result['to_abn_value_1'], format_)
+    worksheet.write(row, comparison_col, 'To ABN', fmt_bold)
+    worksheet.write(row, comparison_col + 1, result['to_abn_value_2'], format_)
+
+    row += 2
+
+    if result['has_pair']:
+
+        worksheet.write(row, col, 'Commission Type', fmt_table_header)
+        worksheet.write(row, col + 1, 'Client', fmt_table_header)
+        worksheet.write(row, col + 2, 'Referrer Name', fmt_table_header)
+        worksheet.write(row, col + 3, 'Amount Paid', fmt_table_header)
+        worksheet.write(row, col + 4, 'GST Paid', fmt_table_header)
+        worksheet.write(row, col + 5, 'Total Amount Paid', fmt_table_header)
+
+        worksheet.write(row, comparison_col, 'Commission Type', fmt_table_header)
+        worksheet.write(row, comparison_col + 1, 'Client', fmt_table_header)
+        worksheet.write(row, comparison_col + 2, 'Referrer Name', fmt_table_header)
+        worksheet.write(row, comparison_col + 3, 'Amount Paid', fmt_table_header)
+        worksheet.write(row, comparison_col + 4, 'GST Paid', fmt_table_header)
+        worksheet.write(row, comparison_col + 5, 'Total Amount Paid', fmt_table_header)
+
+        for key in result['results_rows'].keys():
+            row += 1
+            result_row = result['results_rows'][key]
+
+            worksheet.write(row, col, result_row['commission_type_value_1'])
+            worksheet.write(row, col + 1, result_row['client_value_1'])
+            worksheet.write(row, col + 2, result_row['referrer_value_1'])
+            worksheet.write(row, comparison_col, result_row['commission_type_value_2'])
+            worksheet.write(row, comparison_col + 1, result_row['client_value_2'])
+            worksheet.write(row, comparison_col + 2, result_row['referrer_value_2'])
+
+            format_ = fmt_error if not result_row['amount_paid'] else None
+            worksheet.write(row, col + 3, result_row['amount_paid_value_1'], format_)
+            worksheet.write(row, comparison_col + 3, result_row['amount_paid_value_2'], format_)
+
+            format_ = fmt_error if not result_row['gst_paid'] else None
+            worksheet.write(row, col + 4, result_row['gst_paid_value_1'], format_)
+            worksheet.write(row, comparison_col + 4, result_row['gst_paid_value_2'], format_)
+
+            format_ = fmt_error if not result_row['total'] else None
+            worksheet.write(row, col + 5, result_row['total_value_1'], format_)
+            worksheet.write(row, comparison_col + 5, result_row['total_value_2'], format_)
+
+    else:
+        worksheet.write(row, col, 'No match to compare to', fmt_error)
+
+    row += 2
+
+    format_ = fmt_error if not result['equal_bsb'] else None
+    worksheet.write(row, col, 'BSB', fmt_bold)
+    worksheet.write(row, col + 1, result['bsb_value_1'], format_)
+    worksheet.write(row, comparison_col, 'BSB', fmt_bold)
+    worksheet.write(row, comparison_col + 1, result['bsb_value_2'], format_)
+
+    format_ = fmt_error if not result['equal_account'] else None
+    worksheet.write(row, col + 2, 'Account', fmt_bold)
+    worksheet.write(row, col + 3, result['account_value_1'], format_)
+    worksheet.write(row, comparison_col + 2, 'Account', fmt_bold)
+    worksheet.write(row, comparison_col + 3, result['account_value_2'], format_)
+
+    format_ = fmt_error if not result['equal_final_total'] else None
+    worksheet.write(row, col + 4, 'Amount Banked', fmt_bold)
+    worksheet.write(row, col + 5, result['final_total_value_1'], format_)
+    worksheet.write(row, comparison_col + 4, 'Amount Banked', fmt_bold)
+    worksheet.write(row, comparison_col + 5, result['final_total_value_2'], format_)
 
     workbook.close()
 

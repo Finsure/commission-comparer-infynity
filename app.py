@@ -2,7 +2,8 @@ import os
 
 import click
 
-from src.model import TaxInvoice, create_summary
+from src.model import TaxInvoice, create_summary, create_all_datailed_report
+
 from src.utils import merge_lists
 
 
@@ -53,6 +54,7 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
 
     # print(results)
     create_summary(results)
+    create_all_datailed_report(results)
 
 
 def _read_files(dir_: str, files: list) -> dict:
