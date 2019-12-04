@@ -417,7 +417,11 @@ def create_summary(results: list):
     row = 0
     col = 0
 
-    worksheet.write(row, col, 'Commission Referrer RCTI Summary')
+    fmt_title = workbook.add_format({'font_size': 20, 'bold': True})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
+                                            'bg_color': 'black'})
+
+    worksheet.merge_range('A1:I1', 'Commission Referrer RCTI Summary', fmt_title)
     row += 2
 
     list_errors = []
@@ -479,7 +483,7 @@ def create_summary(results: list):
                 if result_row['overall'] is False:  # it means there is an issue
 
                     if not result_row['has_pair']:
-                        msg = 'No corresponding row in comission file.'
+                        msg = 'No corresponding row in comission file'
                         error = new_error(file, msg, '')  # TODO: Include row number
                         list_errors.append(error)
                         continue
@@ -503,15 +507,15 @@ def create_summary(results: list):
                     list_errors.append(error)
 
     # Write summary header
-    worksheet.write(row, col, 'File')
-    worksheet.write(row, col + 1, 'Message')
-    worksheet.write(row, col + 2, 'Line')
-    worksheet.write(row, col + 3, 'First Value')
-    worksheet.write(row, col + 4, 'First To Compare')
-    worksheet.write(row, col + 5, 'Second Value')
-    worksheet.write(row, col + 6, 'Second To Compare')
-    worksheet.write(row, col + 7, 'Third Value')
-    worksheet.write(row, col + 8, 'Third To Compare')
+    worksheet.write(row, col, 'File', fmt_table_header)
+    worksheet.write(row, col + 1, 'Message', fmt_table_header)
+    worksheet.write(row, col + 2, 'Line', fmt_table_header)
+    worksheet.write(row, col + 3, 'First Value', fmt_table_header)
+    worksheet.write(row, col + 4, 'First To Compare', fmt_table_header)
+    worksheet.write(row, col + 5, 'Second Value', fmt_table_header)
+    worksheet.write(row, col + 6, 'Second To Compare', fmt_table_header)
+    worksheet.write(row, col + 7, 'Third Value', fmt_table_header)
+    worksheet.write(row, col + 8, 'Third To Compare', fmt_table_header)
     row += 1
 
     # Write errors
@@ -608,12 +612,13 @@ def create_detailed_report(result: dict):
             row += 1
             result_row = result['results_rows'][key]
 
-            worksheet.write(row, col, result_row['commission_type_value_1'])
-            worksheet.write(row, col + 1, result_row['client_value_1'])
-            worksheet.write(row, col + 2, result_row['referrer_value_1'])
-            worksheet.write(row, comparison_col, result_row['commission_type_value_2'])
-            worksheet.write(row, comparison_col + 1, result_row['client_value_2'])
-            worksheet.write(row, comparison_col + 2, result_row['referrer_value_2'])
+            format_ = fmt_error if not result_row['has_pair'] else None
+            worksheet.write(row, col, result_row['commission_type_value_1'], format_)
+            worksheet.write(row, col + 1, result_row['client_value_1'], format_)
+            worksheet.write(row, col + 2, result_row['referrer_value_1'], format_)
+            worksheet.write(row, comparison_col, result_row['commission_type_value_2'], format_)
+            worksheet.write(row, comparison_col + 1, result_row['client_value_2'], format_)
+            worksheet.write(row, comparison_col + 2, result_row['referrer_value_2'], format_)
 
             format_ = fmt_error if not result_row['amount_paid'] else None
             worksheet.write(row, col + 3, result_row['amount_paid_value_1'], format_)
