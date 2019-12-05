@@ -109,3 +109,5 @@ venv.bak/
 # Support files
 Referrers
 *.xlsx
+
+.DS_Store
