@@ -411,7 +411,7 @@ def new_error(file, msg, line='', first_value_1='', first_value_2='', second_val
 
 # This function is ugly as shit. We must figure out a better design to simplify things.
 def create_summary(results: list):
-    workbook = xlsxwriter.Workbook('referrer_rcti_summary.xlsx')
+    workbook = xlsxwriter.Workbook('/tmp/referrer_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
 
     row = 0
@@ -545,7 +545,7 @@ def create_detailed_report(result: dict):
     if result['overall']:
         return
 
-    workbook = xlsxwriter.Workbook('DETAILED_' + result['filename'] + '.xlsx')
+    workbook = xlsxwriter.Workbook('/tmp/DETAILED_' + result['filename'] + '.xlsx')
     worksheet = workbook.add_worksheet('Detailed')
 
     fmt_error = workbook.add_format({'font_color': 'red'})

@@ -52,7 +52,7 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-    # print(results)
+    print(results)
     create_summary(results)
     create_all_datailed_report(results)
 
@@ -85,6 +85,6 @@ def new_summary_row():
 if __name__ == '__main__':
     compare_referrer_rcti()
 
-# python app.py -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
+# python cli.py -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
 
 # python app.py --help
