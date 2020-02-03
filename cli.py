@@ -2,7 +2,7 @@ import os
 
 import click
 
-from src.model import TaxInvoice, create_summary, create_all_datailed_report
+from src.model import TaxInvoice, create_summary, create_all_datailed_report, PID
 
 from src.utils import merge_lists
 
@@ -22,6 +22,10 @@ SUMMARY_REPORT = {
     SUMMARY: []
 }
 
+RED = '\033[91m'
+ENDC = '\033[0m'
+OKGREEN = '\033[92m'
+
 
 @click.command()
 @click.option('-l', '--loose', type=int, default=0, help='Margin of error for a comparison to be considered correct.')
@@ -30,6 +34,8 @@ SUMMARY_REPORT = {
 def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
     """ A CLI for comparing the commission files between two directories """
 
+    print("Starting referrer files comparison...")
+    print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
     loankit_files = os.listdir(loankit_dir)
     infynity_files = os.listdir(infynity_dir)
 
@@ -52,9 +58,12 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-    print(results)
+    # print(results)
+    print("Creating summary...")
     create_summary(results)
+    print("Creating detailed reports...")
     create_all_datailed_report(results)
+    print("Finished.")
 
 
 def _read_files(dir_: str, files: list) -> dict:

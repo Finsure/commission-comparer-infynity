@@ -1,5 +1,9 @@
 import copy
 import hashlib
+import calendar
+import time
+import os
+import os.path
 
 import xlsxwriter
 from bs4 import BeautifulSoup
@@ -7,6 +11,13 @@ from bs4 import BeautifulSoup
 from src.utils import merge_lists
 
 ENCODING = 'utf-8'
+PID = str(calendar.timegm(time.gmtime()))
+# OUTPUT_DIR = '/var/www/mystro.com/data/rcti_comparison/'
+OUTPUT_DIR = './Output/'
+OUTPUT_DIR_REFERRER = OUTPUT_DIR + 'referrer_rctis/'
+OUTPUT_DIR_REFERRER_PID = OUTPUT_DIR_REFERRER + PID + '/'
+OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
+OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
 
 
 class TaxInvoice:
@@ -220,7 +231,16 @@ class TaxInvoice:
 
     def __generate_key(self):
         sha = hashlib.sha256()
-        sha.update(self.filename.encode(ENCODING))
+
+        filename_parts = self.filename.split('_')
+        filename_parts = filename_parts[:-5]  # Remove process ID and date stamp
+
+        for index, part in enumerate(filename_parts):
+            if part == "Referrer":
+                del filename_parts[index - 1]  # Remove year-month stamp
+
+        filename_forkey = '_'.join(filename_parts)
+        sha.update(filename_forkey.encode(ENCODING))
         return sha.hexdigest()
 
 
@@ -411,7 +431,17 @@ def new_error(file, msg, line='', first_value_1='', first_value_2='', second_val
 
 # This function is ugly as shit. We must figure out a better design to simplify things.
 def create_summary(results: list):
-    workbook = xlsxwriter.Workbook('/tmp/referrer_rcti_summary.xlsx')
+
+    if not os.path.exists(OUTPUT_DIR):
+        os.mkdir(OUTPUT_DIR)
+
+    if not os.path.exists(OUTPUT_DIR_SUMMARY):
+        os.mkdir(OUTPUT_DIR_SUMMARY)
+
+    if not os.path.exists(OUTPUT_DIR_SUMMARY_PID):
+        os.mkdir(OUTPUT_DIR_SUMMARY_PID)
+
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'referrer_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
 
     row = 0
@@ -535,6 +565,15 @@ def create_summary(results: list):
 
 
 def create_all_datailed_report(results: list):
+    if not os.path.exists(OUTPUT_DIR):
+        os.mkdir(OUTPUT_DIR)
+
+    if not os.path.exists(OUTPUT_DIR_REFERRER):
+        os.mkdir(OUTPUT_DIR_REFERRER)
+
+    if not os.path.exists(OUTPUT_DIR_REFERRER_PID):
+        os.mkdir(OUTPUT_DIR_REFERRER_PID)
+
     for result in results:
         create_detailed_report(result)
 
@@ -545,7 +584,7 @@ def create_detailed_report(result: dict):
     if result['overall']:
         return
 
-    workbook = xlsxwriter.Workbook('/tmp/DETAILED_' + result['filename'] + '.xlsx')
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_REFERRER_PID + 'DETAILED_' + result['filename'] + '.xlsx')
     worksheet = workbook.add_worksheet('Detailed')
 
     fmt_error = workbook.add_format({'font_color': 'red'})
