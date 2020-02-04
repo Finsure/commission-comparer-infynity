@@ -2,7 +2,8 @@ import os
 
 import click
 
-from src.model import ReferrerTaxInvoice, create_summary, create_all_datailed_report, PID
+from src.model import (ReferrerTaxInvoice, BrokerTaxInvoice, create_summary,
+                       create_all_datailed_report, PID)
 
 from src.utils import merge_lists
 
@@ -50,6 +51,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         INFYNITY: _read_files_referrer(infynity_dir, infynity_files)
     }
 
+    # A list with all keys generated in both dicts
     keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
 
     results = []
@@ -58,13 +60,12 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         invoice_lkt = invoices[LOANKIT].get(key, None)
         invoice_inf = invoices[INFYNITY].get(key, None)
 
-        # Chek if its possible to do a comparison
+        # Check if its possible to do a comparison
         if invoice_lkt is not None:
             results.append(invoice_lkt.compare_to(invoice_inf, loose))
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-    # print(results)
     print("Creating summary...")
     create_summary(results)
     print("Creating detailed reports...")
@@ -74,7 +75,18 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
 
 @click.command('compare_broker')
 def rcit_compare_broker(loose, loankit_dir, infynity_dir):
-    pass
+    print("Starting broker files comparison...")
+    print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
+    loankit_files = os.listdir(loankit_dir)
+    infynity_files = os.listdir(infynity_dir)
+
+    invoices = {
+        LOANKIT: _read_files_broker(loankit_dir, loankit_files),
+        INFYNITY: _read_files_broker(infynity_dir, infynity_files)
+    }
+
+    # A list with all keys generated in both dicts
+    keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
 
 
 @click.command('compare_branch')
@@ -89,15 +101,27 @@ rcti.add_command(rcti_compare_branch)
 
 
 def _read_files_referrer(dir_: str, files: list) -> dict:
-    results = {}
+    keys = {}
     for filename in files:
         try:
             ti = ReferrerTaxInvoice(dir_, filename)
-            results[ti.key()] = ti
+            keys[ti.key()] = ti
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
-    return results
+    return keys
+
+
+def _read_files_broker(dir_: str, files: list) -> dict:
+    keys = {}
+    for filename in files:
+        try:
+            ti = BrokerTaxInvoice(dir_, filename)
+            keys[ti.key()] = ti
+        except IndexError:
+            # handle exception when there is a column missing in the file.
+            pass
+    return keys
 
 
 def new_summary_row():

@@ -111,3 +111,5 @@ Referrers
 *.xlsx
 
 .DS_Store
+
+Output/

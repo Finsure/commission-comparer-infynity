@@ -9,7 +9,7 @@ NOTE: Make sure you generate the binary in the same **operating system** it is g
 1. Generate binary file
     1. Run `pyinstaller name_of_main_file.py --onefile` inside the project directory
 
-       You will notice there will be created a few new directories inside your project `dist` and `build`.
+       This will create two new directories inside your project `build` and `dist`.
 
     1. Your cli binary will be inside the `dist` directory
 

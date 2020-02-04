@@ -20,7 +20,51 @@ OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
 OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
 
 
-class ReferrerTaxInvoice:
+class File:
+
+    def __init__(self, directory, filename):
+        self.directory = directory
+        self.filename = filename
+        self._key = self.__generate_key()
+
+    @property
+    def get_full_path(self):
+        self.__fix_path()
+        return self.directory + self.filename
+
+    @property
+    def key(self):
+        return self._key
+
+    def __generate_key(self):
+        sha = hashlib.sha256()
+        sha.update(self.filename.encode(ENCODING))
+        return sha.hexdigest()
+
+    def __fix_path(self):
+        if self.directory[-1] != '/':
+            self.directory += '/'
+
+
+class BrokerTaxInvoice(File):
+
+    def __init__(self, directory, filename):
+        File.__init__(self, directory, filename)
+        self.parse()
+
+    def parse(self):
+        self.from_ = ''
+        self.to = ''
+        self.abn = ''
+        self.bsb = ''
+        self.account = ''
+        self.rows = self.parse_rows()
+
+    def parse_from():
+        pass
+
+
+class ReferrerTaxInvoice():
 
     def __init__(self, directory, filename):
         self.directory = directory
@@ -114,6 +158,7 @@ class ReferrerTaxInvoice:
         return self._key
 
     def serialize(self):
+        # we do this do we dont serialize the filetext because it is too big.
         text = self.filetext
         self.filetext = None
         serialized_obj = copy.copy(self.__dict__)
