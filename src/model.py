@@ -6,6 +6,7 @@ import os
 import os.path
 
 import xlsxwriter
+import pandas
 from bs4 import BeautifulSoup
 
 from src.utils import merge_lists
@@ -28,7 +29,7 @@ class File:
         self._key = self.__generate_key()
 
     @property
-    def get_full_path(self):
+    def full_path(self):
         self.__fix_path()
         return self.directory + self.filename
 
@@ -53,18 +54,37 @@ class BrokerTaxInvoice(File):
         self.parse()
 
     def parse(self):
-        self.from_ = ''
-        self.to = ''
-        self.abn = ''
-        self.bsb = ''
-        self.account = ''
-        self.rows = self.parse_rows()
+        dataframe = pandas.read_excel(self.full_path)
 
-    def parse_from():
-        pass
+        dataframe_broker_info = dataframe.iloc[2:5, 0:2]
+
+        dataframe_rows = dataframe.iloc[8:len(dataframe.index) - 1]
+        dataframe_rows = dataframe_rows.rename(columns=dataframe_rows.iloc[0]).drop(dataframe_rows.index[0])
+        dataframe_rows = dataframe_rows.dropna(how='all')  # remove rows that doesn't have any value
+
+        account_info = dataframe.iloc[len(dataframe.index) - 1][1]
+        account_info_parts = account_info.split(':')
+
+        bsb = account_info_parts[1].strip().split('/')[0][1:]
+
+        account = account_info_parts[1].strip().split('/')[1]
+        if account[-1] == ')':
+            account = account[:-1]
+
+        self.from_ = dataframe_broker_info.iloc[0][1]
+        self.to = dataframe_broker_info.iloc[1][1]
+        self.abn = dataframe_broker_info.iloc[2][1]
+        self.bsb = bsb
+        self.account = account
+
+        self.rows = self.parse_rows(dataframe_rows)
+
+        def parse_rows(dataframe):
+            # TODO: Implement the row parser
+            pass
 
 
-class ReferrerTaxInvoice():
+class ReferrerTaxInvoice:
 
     def __init__(self, directory, filename):
         self.directory = directory
@@ -513,7 +533,7 @@ def create_summary(results: list):
 
             # From does not match
             if not result['equal_from']:
-                error['msg'] = 'From name does not match'
+                msg = 'From name does not match'
                 error = new_error(file, msg, '', result['from_value_1'], result['from_value_2'])
                 list_errors.append(error)
 

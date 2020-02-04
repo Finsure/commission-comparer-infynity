@@ -74,6 +74,9 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
 
 
 @click.command('compare_broker')
+@click.option('-l', '--loose', type=int, default=0, help='Margin of error for a comparison to be considered correct.')
+@click.argument('loankit_dir', required=True, type=click.Path(exists=True))
+@click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcit_compare_broker(loose, loankit_dir, infynity_dir):
     print("Starting broker files comparison...")
     print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
@@ -117,7 +120,8 @@ def _read_files_broker(dir_: str, files: list) -> dict:
     for filename in files:
         try:
             ti = BrokerTaxInvoice(dir_, filename)
-            keys[ti.key()] = ti
+            keys[ti.key] = ti
+            break
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
@@ -141,5 +145,7 @@ if __name__ == '__main__':
     rcti()
 
 # python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
+
+# python cli.py compare_broker -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Brokers/Loankit/" "/Users/petrosschilling/dev/commission-comparer-infynity/Brokers/Infynity/"
 
 # python app.py --help
