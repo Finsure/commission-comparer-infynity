@@ -2,7 +2,7 @@ import os
 
 import click
 
-from src.model import TaxInvoice, create_summary, create_all_datailed_report, PID
+from src.model import ReferrerTaxInvoice, create_summary, create_all_datailed_report, PID
 
 from src.utils import merge_lists
 
@@ -22,16 +22,22 @@ SUMMARY_REPORT = {
     SUMMARY: []
 }
 
+# Just a few colors to use in the console logs.
 RED = '\033[91m'
 ENDC = '\033[0m'
 OKGREEN = '\033[92m'
 
 
-@click.command()
+@click.group()
+def rcti():
+    pass
+
+
+@click.command('compare_referrer')
 @click.option('-l', '--loose', type=int, default=0, help='Margin of error for a comparison to be considered correct.')
 @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
-def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
+def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     """ A CLI for comparing the commission files between two directories """
 
     print("Starting referrer files comparison...")
@@ -40,8 +46,8 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
     infynity_files = os.listdir(infynity_dir)
 
     invoices = {
-        LOANKIT: _read_files(loankit_dir, loankit_files),
-        INFYNITY: _read_files(infynity_dir, infynity_files)
+        LOANKIT: _read_files_referrer(loankit_dir, loankit_files),
+        INFYNITY: _read_files_referrer(infynity_dir, infynity_files)
     }
 
     keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
@@ -66,11 +72,27 @@ def compare_referrer_rcti(loose, loankit_dir, infynity_dir):
     print("Finished.")
 
 
-def _read_files(dir_: str, files: list) -> dict:
+@click.command('compare_broker')
+def rcit_compare_broker(loose, loankit_dir, infynity_dir):
+    pass
+
+
+@click.command('compare_branch')
+def rcti_compare_branch(loose, loankit_dir, infynity_dir):
+    pass
+
+
+# Add subcomands to the CLI
+rcti.add_command(rcti_compare_referrer)
+rcti.add_command(rcit_compare_broker)
+rcti.add_command(rcti_compare_branch)
+
+
+def _read_files_referrer(dir_: str, files: list) -> dict:
     results = {}
     for filename in files:
         try:
-            ti = TaxInvoice(dir_, filename)
+            ti = ReferrerTaxInvoice(dir_, filename)
             results[ti.key()] = ti
         except IndexError:
             # handle exception when there is a column missing in the file.
@@ -92,8 +114,8 @@ def new_summary_row():
 
 
 if __name__ == '__main__':
-    compare_referrer_rcti()
+    rcti()
 
-# python cli.py -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
+# python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
 
 # python app.py --help

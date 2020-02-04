@@ -20,7 +20,7 @@ OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
 OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
 
 
-class TaxInvoice:
+class ReferrerTaxInvoice:
 
     def __init__(self, directory, filename):
         self.directory = directory
@@ -99,12 +99,12 @@ class TaxInvoice:
             row_number += 1
             tds = tr.find_all('td')
             try:
-                row = InvoiceRow(tds[0].text, tds[1].text, tds[2].text,
-                                 tds[3].text, tds[4].text, tds[5].text, row_number)
+                row = ReferrerInvoiceRow(tds[0].text, tds[1].text, tds[2].text,
+                                         tds[3].text, tds[4].text, tds[5].text, row_number)
                 rows[row.key_full()] = row
             except IndexError:
-                row = InvoiceRow(tds[0].text, tds[1].text, '',
-                                 tds[2].text, tds[3].text, tds[4].text, row_number)
+                row = ReferrerInvoiceRow(tds[0].text, tds[1].text, '',
+                                         tds[2].text, tds[3].text, tds[4].text, row_number)
                 rows[row.key_full()] = row
         return rows
 
@@ -184,8 +184,8 @@ class TaxInvoice:
             row_invoice = invoice.rows.get(key, None)
             use_key = key
 
-            # If we couldnt find the row by the InvoiceRow.full_key() it means they are different
-            # so we try to locate them by the InvoiceRow.key()
+            # If we couldnt find the row by the ReferrerInvoiceRow.full_key() it means they are different
+            # so we try to locate them by the ReferrerInvoiceRow.key()
             if row_local is None:
                 for k in self.rows.keys():
                     if self.rows.get(k).key() == row_invoice.key():
@@ -244,7 +244,7 @@ class TaxInvoice:
         return sha.hexdigest()
 
 
-class InvoiceRow:
+class ReferrerInvoiceRow:
 
     def __init__(self, commission_type, client, referrer, amount_paid, gst_paid, total, row_number):
         self.commission_type = commission_type
