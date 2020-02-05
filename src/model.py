@@ -4,6 +4,7 @@ import calendar
 import time
 import os
 import os.path
+import numpy
 
 import xlsxwriter
 import pandas
@@ -47,6 +48,29 @@ class File:
             self.directory += '/'
 
 
+class InvoiceRow:
+
+    def __init__(self):
+        pass
+
+    def compare_numbers(self, n1, n2, margin):
+        n1val = n1
+        n2val = n2
+
+        if n1 or n2 == '':
+            return False
+
+        if type(n1) == str:
+            n1val = float(n1[-1:])  # remove $
+        if type(n2) == str:
+            n2val = float(n2[-1:])  # remove $
+
+        return abs(n1val - n2val) <= margin
+
+    def serialize(self):
+        return self.__dict__
+
+
 class BrokerTaxInvoice(File):
 
     def __init__(self, directory, filename):
@@ -55,12 +79,9 @@ class BrokerTaxInvoice(File):
 
     def parse(self):
         dataframe = pandas.read_excel(self.full_path)
+        dataframe = dataframe.replace(numpy.nan, '', regex=True)
 
         dataframe_broker_info = dataframe.iloc[2:5, 0:2]
-
-        dataframe_rows = dataframe.iloc[8:len(dataframe.index) - 1]
-        dataframe_rows = dataframe_rows.rename(columns=dataframe_rows.iloc[0]).drop(dataframe_rows.index[0])
-        dataframe_rows = dataframe_rows.dropna(how='all')  # remove rows that doesn't have any value
 
         account_info = dataframe.iloc[len(dataframe.index) - 1][1]
         account_info_parts = account_info.split(':')
@@ -77,11 +98,69 @@ class BrokerTaxInvoice(File):
         self.bsb = bsb
         self.account = account
 
-        self.rows = self.parse_rows(dataframe_rows)
+        self.rows = self.parse_rows(dataframe)
 
-        def parse_rows(dataframe):
-            # TODO: Implement the row parser
-            pass
+    def parse_rows(self, dataframe):
+        dataframe_rows = dataframe.iloc[8:len(dataframe.index) - 1]
+        dataframe_rows = dataframe_rows.rename(columns=dataframe_rows.iloc[0]).drop(dataframe_rows.index[0])
+        dataframe_rows = dataframe_rows.dropna(how='all')  # remove rows that don't have any value
+
+        rows = []
+        for index, row in dataframe_rows.iterrows():
+            invoice_row = BrokerInvoiceRow(
+                row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
+                row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
+                row['Total Amount Paid'], row['Comments'])
+            rows.append(invoice_row)
+        return rows
+
+
+class BrokerInvoiceRow(InvoiceRow):
+
+    def __init__(self, commission_type, client, reference_id, bank, loan_balance, amount_paid,
+                 gst_paid, total_amount_paid, comments):
+        InvoiceRow.__init__(self)
+        self.commission_type = str(commission_type)
+        self.client = str(client)
+        self.reference_id = str(reference_id)
+        self.bank = str(bank)
+        self.loan_balance = str(loan_balance)
+        self.amount_paid = str(amount_paid)
+        self.gst_paid = str(gst_paid)
+        self.total_amount_paid = str(total_amount_paid)
+        self.comments = str(comments)
+
+        self._key = self.__generate_key()
+        self._key_full = self.__generate_key_full()
+
+    @property
+    def key(self):
+        return self._key
+
+    @property
+    def key_full(self):
+        return self._key_full
+
+    def __generate_key(self):
+        sha = hashlib.sha256()
+        sha.update(self.commission_type.encode(ENCODING))
+        sha.update(self.client.encode(ENCODING))
+        sha.update(self.reference_id.encode(ENCODING))
+        sha.update(self.bank.encode(ENCODING))
+        return sha.hexdigest()
+
+    def __generate_key_full(self):
+        sha = hashlib.sha256()
+        sha.update(self.commission_type.encode(ENCODING))
+        sha.update(self.client.encode(ENCODING))
+        sha.update(self.reference_id.encode(ENCODING))
+        sha.update(self.bank.encode(ENCODING))
+        sha.update(self.loan_balance.encode(ENCODING))
+        sha.update(self.amount_paid.encode(ENCODING))
+        sha.update(self.gst_paid.encode(ENCODING))
+        sha.update(self.total_amount_paid.encode(ENCODING))
+        sha.update(self.comments.encode(ENCODING))
+        return sha.hexdigest()
 
 
 class ReferrerTaxInvoice:
@@ -185,8 +264,8 @@ class ReferrerTaxInvoice:
         self.filetext = text
         return serialized_obj
 
-    # Man I hope I never need to maintain this!!! Such an ugly code written by me.
-    def compare_to(self, invoice, margin=0.0000001):  # noqa F821
+    # Man I hope I never need to maintain this!!!
+    def compare_to(self, invoice, margin=0.0000001):
         result = result_invoice()
         result['filename'] = self.filename
         result['file'] = self.get_full_path()

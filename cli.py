@@ -80,8 +80,9 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
 def rcit_compare_broker(loose, loankit_dir, infynity_dir):
     print("Starting broker files comparison...")
     print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
-    loankit_files = os.listdir(loankit_dir)
-    infynity_files = os.listdir(infynity_dir)
+
+    loankit_files = list_files(loankit_dir)
+    infynity_files = list_files(infynity_dir)
 
     invoices = {
         LOANKIT: _read_files_broker(loankit_dir, loankit_files),
@@ -90,6 +91,24 @@ def rcit_compare_broker(loose, loankit_dir, infynity_dir):
 
     # A list with all keys generated in both dicts
     keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
+
+    results = []
+
+    for key in keys_all:
+        invoice_lkt = invoices[LOANKIT].get(key, None)
+        invoice_inf = invoices[INFYNITY].get(key, None)
+
+        # Check if its possible to do a comparison
+        if invoice_lkt is not None:
+            results.append(invoice_lkt.compare_to(invoice_inf, loose))
+        elif invoice_inf is not None:
+            results.append(invoice_inf.compare_to(invoice_lkt, loose))
+
+    # print("Creating summary...")
+    # create_summary(results)
+    # print("Creating detailed reports...")
+    # create_all_datailed_report(results)
+    # print("Finished.")
 
 
 @click.command('compare_branch')
@@ -101,6 +120,15 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
 rcti.add_command(rcti_compare_referrer)
 rcti.add_command(rcit_compare_broker)
 rcti.add_command(rcti_compare_branch)
+
+
+def list_files(dir_: str) -> list:
+    files = []
+    with os.scandir(dir_) as it:
+        for entry in it:
+            if not entry.name.startswith('.') and not entry.name.startswith('~') and entry.is_file():
+                files.append(entry.name)
+    return files
 
 
 def _read_files_referrer(dir_: str, files: list) -> dict:
@@ -117,11 +145,10 @@ def _read_files_referrer(dir_: str, files: list) -> dict:
 
 def _read_files_broker(dir_: str, files: list) -> dict:
     keys = {}
-    for filename in files:
+    for file in files:
         try:
-            ti = BrokerTaxInvoice(dir_, filename)
+            ti = BrokerTaxInvoice(dir_, file)
             keys[ti.key] = ti
-            break
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
