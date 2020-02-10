@@ -2,9 +2,9 @@ import os
 
 import click
 
-from src.model import (ReferrerTaxInvoice, BrokerTaxInvoice, create_summary_referrer,
-                       create_all_datailed_report, PID, create_summary_broker)
-
+from src.model.taxinvoice import create_detailed_dir, create_summary_dir, PID
+from src.model.taxinvoice_referrer import create_summary_referrer, create_detailed_referrer, ReferrerTaxInvoice
+from src.model.taxinvoice_broker import create_summary_broker, create_detailed_broker, BrokerTaxInvoice
 from src.utils import merge_lists
 
 
@@ -66,10 +66,18 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
+    create_summary_dir()
+    create_detailed_dir()
+
     print("Creating summary...")
+
     create_summary_referrer(results)
+
     print("Creating detailed reports...")
-    create_all_datailed_report(results)
+
+    for result in results:
+        create_detailed_referrer(result)
+
     print("Finished.")
 
 
@@ -104,10 +112,19 @@ def rcit_compare_broker(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
+    create_summary_dir()
+    create_detailed_dir()
+
     print("Creating summary...")
+
     create_summary_broker(results)
-    # print("Creating detailed reports...")
-    # create_all_datailed_report(results)
+
+    # print(len(results))
+    print("Creating detailed reports...")
+
+    for result in results:
+        create_detailed_broker(result)
+
     print("Finished.")
 
 
