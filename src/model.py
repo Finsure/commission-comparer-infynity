@@ -110,15 +110,48 @@ class BrokerTaxInvoice(File):
             invoice_row = BrokerInvoiceRow(
                 row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
                 row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
-                row['Total Amount Paid'], row['Comments'])
+                row['Total Amount Paid'], row['Comments'], index)
             rows.append(invoice_row)
         return rows
+
+    def compare_to(self, invoice, margin=0.000001):
+        result = result_invoice_broker()
+        result['filename'] = self.filename
+        result['file'] = self.full_path
+
+        has_pair = invoice is not None
+        result['has_pair'] = has_pair
+
+        result['from_a'] = self.from_
+        result['to_a'] = self.to
+        result['abn_a'] = self.abn
+        result['bsb_a'] = self.bsb
+        result['account_a'] = self.account
+
+        if has_pair:
+            result['from_b'] = invoice.from_
+            result['to_b'] = invoice.to
+            result['abn_b'] = invoice.abn
+            result['bsb_b'] = invoice.bsb
+            result['account_b'] = invoice.account
+            result['equal_from'] = self.from_ == invoice.from_
+            result['equal_to'] = self.to == invoice.to
+            result['equal_abn'] = self.abn == invoice.abn
+            result['equal_bsb'] = self.bsb == invoice.bsb
+            result['equal_account'] = self.account == invoice.account
+            result['equal_amount_rows'] = len(self.rows) == len(invoice.rows)
+
+        result['overall'] = (result['equal_from'] and result['equal_to'] and result['equal_abn']
+                             and result['equal_bsb'] and result['equal_account']
+                             and result['equal_amount_rows'])
+
+        # TODO: Finish this method #2 after finishing #1
 
 
 class BrokerInvoiceRow(InvoiceRow):
 
     def __init__(self, commission_type, client, reference_id, bank, loan_balance, amount_paid,
-                 gst_paid, total_amount_paid, comments):
+                 gst_paid, total_amount_paid, comments, row_number):
         InvoiceRow.__init__(self)
         self.commission_type = str(commission_type)
         self.client = str(client)
@@ -129,6 +162,7 @@ class BrokerInvoiceRow(InvoiceRow):
         self.gst_paid = str(gst_paid)
         self.total_amount_paid = str(total_amount_paid)
         self.comments = str(comments)
+        self.row_number = str(row_number)
 
         self._key = self.__generate_key()
         self._key_full = self.__generate_key_full()
@@ -161,6 +195,64 @@ class BrokerInvoiceRow(InvoiceRow):
         sha.update(self.total_amount_paid.encode(ENCODING))
         sha.update(self.comments.encode(ENCODING))
         return sha.hexdigest()
+
+    def compare_to(self, row, margin=0.0000001, reverse=True):
+        result = result_row_broker()
+        result['row_number'] = self.row_number
+
+        has_pair = row is not None
+        result['has_pair'] = has_pair
+
+        equal_loan_balance = False
+        equal_amount_paid = False
+        equal_gst_paid = False
+        equal_total_amount_paid = False
+        equal_comments = False
+
+        if has_pair:
+            equal_loan_balance = self.compare_numbers(self.loan_balance, row.loan_balance, margin)
+            equal_amount_paid = self.compare_numbers(self.amount_paid, row.amount_paid, margin)
+            equal_gst_paid = self.compare_numbers(self.gst_paid, row.gst_paid, margin)
+            equal_total_amount_paid = self.compare_numbers(self.total_amount_paid, row.total_amount_paid, margin)
+            equal_comments = self.comments == row.comments
+
+        overall = equal_loan_balance and equal_amount_paid and equal_gst_paid and equal_total_amount_paid and equal_comments
+
+        a = 'a'
+        b = 'b'
+        if reverse:
+            a = 'b'
+            b = 'a'
+
+        result['overall'] = overall
+        result['loan_balance'] = equal_loan_balance
+        result['amount_paid'] = equal_amount_paid
+        result['gst_paid'] = equal_gst_paid
+        result['total_amount_paid'] = equal_total_amount_paid
+        result['comments'] = equal_comments
+
+        result['commission_type_' + a] = self.commission_type
+        result['client_' + a] = self.client
+        result['reference_id_' + a] = self.reference_id
+        result['bank_' + a] = self.bank
+        result['loan_balance_' + a] = self.loan_balance
+        result['amount_paid_' + a] = self.amount_paid
+        result['gst_paid_' + a] = self.gst_paid
+        result['total_amount_paid_' + a] = self.total_amount_paid
+        result['comments_' + a] = self.comments
+
+        if has_pair:
+            result['commission_type_' + b] = row.commission_type
+            result['client_' + b] = row.client
+            result['reference_id_' + b] = row.reference_id
+            result['bank_' + b] = row.bank
+            result['loan_balance_' + b] = row.loan_balance
+            result['amount_paid_' + b] = row.amount_paid
+            result['gst_paid_' + b] = row.gst_paid
+            result['total_amount_paid_' + b] = row.total_amount_paid
+            result['comments_' + b] = row.comments
+
+        return result
 
 
 class ReferrerTaxInvoice:
@@ -266,7 +358,7 @@ class ReferrerTaxInvoice:
 
     # Man I hope I never need to maintain this!!!
     def compare_to(self, invoice, margin=0.0000001):
-        result = result_invoice()
+        result = result_invoice_referrer()
         result['filename'] = self.filename
         result['file'] = self.get_full_path()
 
@@ -415,8 +507,8 @@ class ReferrerInvoiceRow:
     def serialize(self):
         return self.__dict__
 
-    def compare_to(self, row, margin=0.0000001, reverse=True):  # noqa F821
-        result = result_row()
+    def compare_to(self, row, margin=0.0000001, reverse=True):
+        result = result_row_referrer()
         result['row_number'] = self.row_number
 
         has_pair = row is not None
@@ -500,7 +592,7 @@ class ReferrerInvoiceRow:
         return sha.hexdigest()
 
 
-def result_invoice():
+def result_invoice_referrer():
     return {
         'filename': '',
         'file': '',
@@ -532,7 +624,33 @@ def result_invoice():
     }
 
 
-def result_row():
+def result_invoice_broker():
+    return {
+        'filename': '',
+        'file': '',
+        'has_pair': False,
+        'equal_from': False,
+        'equal_to': False,
+        'equal_abn': False,
+        'equal_bsb': False,
+        'equal_account': False,
+        'equal_amount_rows': False,
+        'overall': False,
+        'invoice_rows': {},
+        'from_a': '',
+        'from_b': '',
+        'to_a': '',
+        'to_b': '',
+        'abn_a': '',
+        'abn_b': '',
+        'bsb_a': '',
+        'bsb_b': '',
+        'account_a': '',
+        'account_b': '',
+    }
+
+
+def result_row_referrer():
     return {
         'overall': False,
         'has_pair': False,
@@ -555,6 +673,35 @@ def result_row():
         'gst_paid_value_2': '',
         'total_value_1': '',
         'total_value_2': ''
+    }
+
+
+def result_row_broker():
+    return {
+        'overall': False,
+        'has_pair': False,
+        'commission_type': False,
+        'client': False,
+        'reference_id': False,
+        'amount_paid': False,
+        'gst_paid': False,
+        'total_amount_paid': False,
+        'comments': False,
+        'row_number': 0,
+        'commission_type_a': '',
+        'commission_type_b': '',
+        'client_a': '',
+        'client_b': '',
+        'reference_id_a': '',
+        'reference_id_b': '',
+        'amount_paid_a': '',
+        'amount_paid_b': '',
+        'gst_paid_a': '',
+        'gst_paid_b': '',
+        'total_amount_paid_a': '',
+        'total_amount_paid_b': '',
+        'comments_a': '',
+        'comments_b': ''
     }
 
 
