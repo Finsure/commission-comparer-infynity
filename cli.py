@@ -2,8 +2,8 @@ import os
 
 import click
 
-from src.model import (ReferrerTaxInvoice, BrokerTaxInvoice, create_summary,
-                       create_all_datailed_report, PID)
+from src.model import (ReferrerTaxInvoice, BrokerTaxInvoice, create_summary_referrer,
+                       create_all_datailed_report, PID, create_summary_broker)
 
 from src.utils import merge_lists
 
@@ -67,7 +67,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
     print("Creating summary...")
-    create_summary(results)
+    create_summary_referrer(results)
     print("Creating detailed reports...")
     create_all_datailed_report(results)
     print("Finished.")
@@ -104,11 +104,11 @@ def rcit_compare_broker(loose, loankit_dir, infynity_dir):
         elif invoice_inf is not None:
             results.append(invoice_inf.compare_to(invoice_lkt, loose))
 
-    # print("Creating summary...")
-    # create_summary(results)
+    print("Creating summary...")
+    create_summary_broker(results)
     # print("Creating detailed reports...")
     # create_all_datailed_report(results)
-    # print("Finished.")
+    print("Finished.")
 
 
 @click.command('compare_branch')

@@ -75,6 +75,7 @@ class BrokerTaxInvoice(File):
 
     def __init__(self, directory, filename):
         File.__init__(self, directory, filename)
+        self._key = self.__generate_key()
         self.parse()
 
     def parse(self):
@@ -105,13 +106,13 @@ class BrokerTaxInvoice(File):
         dataframe_rows = dataframe_rows.rename(columns=dataframe_rows.iloc[0]).drop(dataframe_rows.index[0])
         dataframe_rows = dataframe_rows.dropna(how='all')  # remove rows that don't have any value
 
-        rows = []
+        rows = {}
         for index, row in dataframe_rows.iterrows():
             invoice_row = BrokerInvoiceRow(
                 row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
                 row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
                 row['Total Amount Paid'], row['Comments'], index)
-            rows.append(invoice_row)
+            rows[invoice_row.key_full] = invoice_row
         return rows
 
     def compare_to(self, invoice, margin=0.000001):
@@ -145,7 +146,65 @@ class BrokerTaxInvoice(File):
                              and result['equal_bsb'] and result['equal_account']
                              and result['equal_amount_rows'])
 
-        # TODO: Finish this method #2 after finishing #1
+        if not has_pair:
+            result_rows = {}
+            for key in self.rows.keys():
+                row_local = self.rows[key]
+                result_rows[key] = row_local.compare_to(None)
+            result['results_rows'] = result_rows
+            return result
+
+        if len(self.rows) == 0:
+            self.parse()
+        if len(invoice.rows) == 0:
+            invoice.parse()
+
+        keys_all = merge_lists(self.rows.keys(), invoice.rows.keys())
+
+        result_rows = {}
+
+        for key in keys_all:
+            row_local = self.rows.get(key, None)
+            row_invoice = invoice.rows.get(key, None)
+            use_key = key
+
+            # If we couldnt find the row by the ReferrerInvoiceRow.full_key() it means they are different
+            # so we try to locate them by the ReferrerInvoiceRow.key()
+            if row_local is None:
+                for k in self.rows.keys():
+                    if self.rows.get(k).key == row_invoice.key:
+                        row_local = self.rows[k]
+                        keys_all.remove(row_local.key_full)
+                        use_key = k
+            elif row_invoice is None:
+                for k in invoice.rows.keys():
+                    if invoice.rows.get(k).key == row_local.key:
+                        row_invoice = invoice.rows[k]
+                        keys_all.remove(row_invoice.key_full)
+                        use_key = k
+
+            if row_local is not None:
+                result_rows[use_key] = row_local.compare_to(row_invoice, margin, False)
+            else:
+                result_rows[use_key] = row_invoice.compare_to(row_local, margin, True)
+
+            result['results_rows'] = result_rows
+
+            for key in result['results_rows'].keys():
+                result['overall'] = result['overall'] and result['results_rows'][key]['overall']
+
+            return result
+
+    def __generate_key(self):
+        sha = hashlib.sha256()
+
+        filename_parts = self.filename.split('_')
+        filename_parts = filename_parts[:-6]  # Remove process ID and date stamp
+        print(filename_parts)
+        filename_forkey = '_'.join(filename_parts)
+
+        sha.update(filename_forkey.encode(ENCODING))
+        return sha.hexdigest()
 
 
 class BrokerInvoiceRow(InvoiceRow):
@@ -705,33 +764,65 @@ def result_row_broker():
     }
 
 
-def new_error(file, msg, line='', first_value_1='', first_value_2='', second_value_1='',
-              second_value_2='', third_value_1='', third_value_2=''):
+def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
+              third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b=''):
     return {
         'file': file,
         'msg': msg,
         'line': line,
-        'first_value_1': first_value_1,
-        'first_value_2': first_value_2,
-        'second_value_1': second_value_1,
-        'second_value_2': second_value_2,
-        'third_value_1': third_value_1,
-        'third_value_2': third_value_2
+        'first_a': first_a,
+        'first_b': first_b,
+        'second_a': second_a,
+        'second_b': second_b,
+        'third_a': third_a,
+        'third_b': third_b,
+        'fourth_a': fourth_a,
+        'fourth_b': fourth_b,
+        'fifth_a': fifth_a,
+        'fifth_b': fifth_b
     }
 
 
+def write_errors(errors: list, worksheet, row, col, header_fmt):
+    # Write summary header
+    worksheet.write(row, col, 'File', header_fmt)
+    worksheet.write(row, col + 1, 'Message', header_fmt)
+    worksheet.write(row, col + 2, 'Line', header_fmt)
+    worksheet.write(row, col + 3, 'First Value', header_fmt)
+    worksheet.write(row, col + 4, 'First To Compare', header_fmt)
+    worksheet.write(row, col + 5, 'Second Value', header_fmt)
+    worksheet.write(row, col + 6, 'Second To Compare', header_fmt)
+    worksheet.write(row, col + 7, 'Third Value', header_fmt)
+    worksheet.write(row, col + 8, 'Third To Compare', header_fmt)
+    worksheet.write(row, col + 9, 'Fourth Value', header_fmt)
+    worksheet.write(row, col + 10, 'Fourth To Compare', header_fmt)
+    worksheet.write(row, col + 11, 'Fifth Value', header_fmt)
+    worksheet.write(row, col + 12, 'Fifth To Compare', header_fmt)
+    row += 1
+
+    # Write errors
+    for error in errors:
+        worksheet.write(row, col, error['file'])
+        worksheet.write(row, col + 1, error['msg'])
+        worksheet.write(row, col + 2, error['line'])
+        worksheet.write(row, col + 3, error['first_a'])
+        worksheet.write(row, col + 4, error['first_b'])
+        worksheet.write(row, col + 5, error['second_a'])
+        worksheet.write(row, col + 6, error['second_b'])
+        worksheet.write(row, col + 7, error['third_a'])
+        worksheet.write(row, col + 8, error['third_b'])
+        worksheet.write(row, col + 9, error['fourth_a'])
+        worksheet.write(row, col + 10, error['fourth_b'])
+        worksheet.write(row, col + 11, error['fifth_a'])
+        worksheet.write(row, col + 12, error['fifth_b'])
+        row += 1
+
+    return worksheet
+
+
 # This function is ugly as shit. We must figure out a better design to simplify things.
-def create_summary(results: list):
-
-    if not os.path.exists(OUTPUT_DIR):
-        os.mkdir(OUTPUT_DIR)
-
-    if not os.path.exists(OUTPUT_DIR_SUMMARY):
-        os.mkdir(OUTPUT_DIR_SUMMARY)
-
-    if not os.path.exists(OUTPUT_DIR_SUMMARY_PID):
-        os.mkdir(OUTPUT_DIR_SUMMARY_PID)
-
+def create_summary_referrer(results: list):
+    _create_summary_dir()
     workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'referrer_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
 
@@ -805,7 +896,7 @@ def create_summary(results: list):
 
                     if not result_row['has_pair']:
                         msg = 'No corresponding row in comission file'
-                        error = new_error(file, msg, '')  # TODO: Include row number
+                        error = new_error(file, msg, '')
                         list_errors.append(error)
                         continue
 
@@ -827,32 +918,114 @@ def create_summary(results: list):
                                       values_list.get(5, ''))
                     list_errors.append(error)
 
-    # Write summary header
-    worksheet.write(row, col, 'File', fmt_table_header)
-    worksheet.write(row, col + 1, 'Message', fmt_table_header)
-    worksheet.write(row, col + 2, 'Line', fmt_table_header)
-    worksheet.write(row, col + 3, 'First Value', fmt_table_header)
-    worksheet.write(row, col + 4, 'First To Compare', fmt_table_header)
-    worksheet.write(row, col + 5, 'Second Value', fmt_table_header)
-    worksheet.write(row, col + 6, 'Second To Compare', fmt_table_header)
-    worksheet.write(row, col + 7, 'Third Value', fmt_table_header)
-    worksheet.write(row, col + 8, 'Third To Compare', fmt_table_header)
-    row += 1
-
-    # Write errors
-    for error in list_errors:
-        worksheet.write(row, col, error['file'])
-        worksheet.write(row, col + 1, error['msg'])
-        worksheet.write(row, col + 2, error['line'])
-        worksheet.write(row, col + 3, error['first_value_1'])
-        worksheet.write(row, col + 4, error['first_value_2'])
-        worksheet.write(row, col + 5, error['second_value_1'])
-        worksheet.write(row, col + 6, error['second_value_2'])
-        worksheet.write(row, col + 7, error['third_value_1'])
-        worksheet.write(row, col + 8, error['third_value_2'])
-        row += 1
-
+    worksheet = write_errors(list_errors, worksheet, row, col, fmt_table_header)
     workbook.close()
+
+
+def create_summary_broker(results: list):
+    _create_summary_dir()
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'referrer_rcti_summary.xlsx')
+    worksheet = workbook.add_worksheet('Summary')
+
+    row = 0
+    col = 0
+
+    fmt_title = workbook.add_format({'font_size': 20, 'bold': True})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
+                                            'bg_color': 'black'})
+
+    worksheet.merge_range('A1:I1', 'Commission Referrer RCTI Summary', fmt_title)
+    row += 2
+
+    list_errors = []
+    for result in results:
+        if result['overall'] is False:  # it means there is an issue
+            file = result['file']
+
+            # Error when the file doesnt have a pair
+            if not result['has_pair']:
+                msg = 'No corresponding commission file found'
+                error = new_error(file, msg)
+                list_errors.append(error)
+                continue
+
+                # From does not match
+            if not result['equal_from']:
+                msg = 'From name does not match'
+                error = new_error(file, msg, '', result['from_a'], result['from_b'])
+                list_errors.append(error)
+
+            # From ABN does not match
+            if not result['equal_abn']:
+                msg = 'From ABN does not match'
+                error = new_error(file, msg, '', result['abn_a'], result['abn_b'])
+                list_errors.append(error)
+
+            # To does not match
+            if not result['equal_to']:
+                msg = 'To name does not match'
+                error = new_error(file, msg, '', result['to_a'], result['to_b'])
+                list_errors.append(error)
+
+            # BSB does not match
+            if not result['equal_bsb']:
+                msg = 'BSB does not match'
+                error = new_error(file, msg, '', result['bsb_a'], result['bsb_b'])
+                list_errors.append(error)
+
+            # Account does not match
+            if not result['equal_account']:
+                msg = 'Account number does not match'
+                error = new_error(file, msg, '', result['account_a'], result['account_b'])
+                list_errors.append(error)
+
+            for key in result['results_rows'].keys():
+                result_row = result['results_rows'][key]
+                if result_row['overall'] is False:  # it means there is an issue
+
+                    if not result_row['has_pair']:
+                        msg = 'No corresponding row in comission file'
+                        error = new_error(file, msg, '')
+                        list_errors.append(error)
+                        continue
+
+                    values_list = safelist([])
+                    if not result_row['loan_balance']:
+                        values_list.append(result_row['loan_balance_a'])
+                        values_list.append(result_row['loan_balance_b'])
+                    if not result_row['amount_paid']:
+                        values_list.append(result_row['amount_paid_a'])
+                        values_list.append(result_row['amount_paid_b'])
+                    if not result_row['gst_paid']:
+                        values_list.append(result_row['gst_paid_a'])
+                        values_list.append(result_row['gst_paid_b'])
+                    if not result_row['total_amount_paid']:
+                        values_list.append(result_row['total_amount_paid_a'])
+                        values_list.append(result_row['total_amount_paid_b'])
+                    if not result_row['comments']:
+                        values_list.append(result_row['comments_a'])
+                        values_list.append(result_row['comments_b'])
+
+                    msg = 'Values not match'
+                    error = new_error(file, msg, result_row['row_number'], values_list.get(0, ''),
+                                      values_list.get(1, ''), values_list.get(2, ''),
+                                      values_list.get(3, ''), values_list.get(4, ''),
+                                      values_list.get(5, ''))
+                    list_errors.append(error)
+
+    worksheet = write_errors(list_errors, worksheet, row, col, fmt_table_header)
+    workbook.close()
+
+
+def _create_summary_dir():
+    if not os.path.exists(OUTPUT_DIR):
+        os.mkdir(OUTPUT_DIR)
+
+    if not os.path.exists(OUTPUT_DIR_SUMMARY):
+        os.mkdir(OUTPUT_DIR_SUMMARY)
+
+    if not os.path.exists(OUTPUT_DIR_SUMMARY_PID):
+        os.mkdir(OUTPUT_DIR_SUMMARY_PID)
 
 
 def create_all_datailed_report(results: list):
