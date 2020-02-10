@@ -12,19 +12,13 @@ from src.utils import merge_lists, safelist
 class ReferrerTaxInvoice(TaxInvoice):
 
     def __init__(self, directory, filename):
-        self.directory = directory
-        self.filename = filename
+        TaxInvoice.__init__(self, directory, filename)
         self.filetext = self.get_file_text()
+        self._key = self.__generate_key()
         self.parse()
 
-        self._key = None
-
-    def get_full_path(self):
-        self.__fix_path()
-        return self.directory + self.filename
-
     def get_file_text(self):
-        file = open(self.get_full_path(), 'r')
+        file = open(self.full_path, 'r')
         return file.read()
 
     def parse(self):
@@ -90,17 +84,12 @@ class ReferrerTaxInvoice(TaxInvoice):
             try:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, tds[2].text,
                                          tds[3].text, tds[4].text, tds[5].text, row_number)
-                rows[row.key_full()] = row
+                rows[row.key_full] = row
             except IndexError:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, '',
                                          tds[2].text, tds[3].text, tds[4].text, row_number)
-                rows[row.key_full()] = row
+                rows[row.key_full] = row
         return rows
-
-    def key(self):
-        if self._key is None:
-            self._key = self.__generate_key()
-        return self._key
 
     def serialize(self):
         # we do this do we dont serialize the filetext because it is too big.
@@ -114,7 +103,7 @@ class ReferrerTaxInvoice(TaxInvoice):
     def compare_to(self, invoice, margin=0.0000001):
         result = result_invoice_referrer()
         result['filename'] = self.filename
-        result['file'] = self.get_full_path()
+        result['file'] = self.full_path
 
         has_pair = invoice is not None
         #  If we reached here it means the file has a pair
@@ -169,6 +158,7 @@ class ReferrerTaxInvoice(TaxInvoice):
 
         result_rows = {}
 
+        # Here we compare the reports rows
         for key in keys_all:
             row_local = self.rows.get(key, None)
             row_invoice = invoice.rows.get(key, None)
@@ -176,18 +166,26 @@ class ReferrerTaxInvoice(TaxInvoice):
 
             # If we couldnt find the row by the ReferrerInvoiceRow.full_key() it means they are different
             # so we try to locate them by the ReferrerInvoiceRow.key()
-            if row_local is None:
-                for k in self.rows.keys():
-                    if self.rows.get(k).key() == row_invoice.key():
-                        row_local = self.rows[k]
-                        keys_all.remove(row_local.key_full())
-                        use_key = k
-            elif row_invoice is None:
-                for k in invoice.rows.keys():
-                    if invoice.rows.get(k).key() == row_local.key():
-                        row_invoice = invoice.rows[k]
-                        keys_all.remove(row_invoice.key_full())
-                        use_key = k
+            try:
+                if row_local is None:
+                    for k in self.rows.keys():
+                        if self.rows.get(k).key == row_invoice.key:
+                            row_local = self.rows[k]
+                            keys_all.remove(row_local.key_full)
+                            use_key = k
+                            break
+                elif row_invoice is None:
+                    for k in invoice.rows.keys():
+                        if invoice.rows.get(k).key == row_local.key:
+                            row_invoice = invoice.rows[k]
+                            keys_all.remove(row_invoice.key_full)
+                            use_key = k
+                            break
+            except ValueError:
+                print('\033[91mWARNING!')
+                print('StackTrace: You are trying to remove a record that is not in the keys list anymore')
+                print('This happens when the key is used to compare (not the full_key) and the wrong record is removed from the list')
+                print('\033[0m')
 
             if row_local is not None:
                 result_rows[use_key] = row_local.compare_to(row_invoice, margin, False)
@@ -215,10 +213,6 @@ class ReferrerTaxInvoice(TaxInvoice):
         parts_account = account.split(':')
         return parts_account
 
-    def __fix_path(self):
-        if self.directory[-1] != '/':
-            self.directory += '/'
-
     def __generate_key(self):
         sha = hashlib.sha256()
 
@@ -234,9 +228,10 @@ class ReferrerTaxInvoice(TaxInvoice):
         return sha.hexdigest()
 
 
-class ReferrerInvoiceRow:
+class ReferrerInvoiceRow(InvoiceRow):
 
     def __init__(self, commission_type, client, referrer, amount_paid, gst_paid, total, row_number):
+        InvoiceRow.__init__(self)
         self.commission_type = commission_type
         self.client = client
         self.referrer = referrer
@@ -245,21 +240,16 @@ class ReferrerInvoiceRow:
         self.total = total
         self.row_number = row_number
 
-        self._key = None
-        self._key_full = None
+        self._key = self.__generate_key()
+        self._key_full = self.__generate_key_full()
 
+    @property
     def key(self):
-        if self._key is None:
-            self._key = self.__generate_key()
         return self._key
 
+    @property
     def key_full(self):
-        if self._key_full is None:
-            self._key_full = self.__generate_key_full()
         return self._key_full
-
-    def serialize(self):
-        return self.__dict__
 
     def compare_to(self, row, margin=0.0000001, reverse=True):
         result = result_row_referrer()
@@ -313,20 +303,6 @@ class ReferrerInvoiceRow:
             result['total_value_' + second] = row.total
 
         return result
-
-    def compare_numbers(self, n1, n2, margin):
-        n1val = n1
-        n2val = n2
-
-        if n1 or n2 == '':
-            return False
-
-        if type(n1) == str:
-            n1val = float(n1[-1:])  # remove $
-        if type(n2) == str:
-            n2val = float(n2[-1:])  # remove $
-
-        return abs(n1val - n2val) <= margin
 
     def __generate_key(self):
         sha = hashlib.sha256()

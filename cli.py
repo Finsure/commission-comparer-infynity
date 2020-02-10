@@ -153,7 +153,7 @@ def _read_files_referrer(dir_: str, files: list) -> dict:
     for filename in files:
         try:
             ti = ReferrerTaxInvoice(dir_, filename)
-            keys[ti.key()] = ti
+            keys[ti.key] = ti
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
