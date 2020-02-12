@@ -1,3 +1,4 @@
+import os
 import numpy
 import hashlib
 
@@ -5,7 +6,7 @@ import pandas
 import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_SUMMARY_PID,
-                                  new_error, write_errors)
+                                  OUTPUT_DIR_BROKER_PID, new_error, write_errors, worksheet_write)
 from src.utils import merge_lists, safelist
 
 
@@ -401,5 +402,70 @@ def create_summary_broker(results: list):
     workbook.close()
 
 
-def create_detailed_broker(results: list):
-    pass
+def create_detailed_broker(result: dict):
+    if result['overall']:
+        return
+
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_BROKER_PID + 'DETAILED_' + result['filename'] + '.xlsx')
+    worksheet = workbook.add_worksheet('Detailed')
+
+    fmt_error = workbook.add_format({'font_color': 'red'})
+    fmt_bold = workbook.add_format({'bold': True})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
+                                            'bg_color': 'black'})
+
+    row = 0
+    col_a = 0
+    col_b = 10
+
+    worksheet.merge_range('A1:N1', result['filename'])
+    row += 2
+
+    txt_from = 'From'
+    format_ = fmt_error if not result['equal_from'] else None
+    worksheet_write(worksheet, row, col_a, txt_from, fmt_bold, result['from_a'], format_)
+    worksheet_write(worksheet, row, col_b, txt_from, fmt_bold, result['from_b'], format_)
+    row += 1
+
+    txt_to = 'To'
+    format_ = fmt_error if not result['equal_to'] else None
+    worksheet_write(worksheet, row, col_a, txt_to, fmt_bold, result['to_a'], format_)
+    worksheet_write(worksheet, row, col_b, txt_to, fmt_bold, result['to_b'], format_)
+    row += 1
+
+    txt_abn = 'ABN'
+    format_ = fmt_error if not result['equal_abn'] else None
+    worksheet_write(worksheet, row, col_a, txt_abn, fmt_bold, result['to_a'], format_)
+    worksheet_write(worksheet, row, col_b, txt_abn, fmt_bold, result['to_b'], format_)
+    row += 1
+
+    txt_bsb = 'BSB'
+    format_ = fmt_error if not result['equal_bsb'] else None
+    worksheet_write(worksheet, row, col_a, txt_bsb, fmt_bold, result['bsb_a'], format_)
+    worksheet_write(worksheet, row, col_b, txt_bsb, fmt_bold, result['bsb_b'], format_)
+    row += 1
+
+    txt_account = 'Account'
+    format_ = fmt_error if not result['equal_account'] else None
+    worksheet_write(worksheet, row, col_a, txt_account, fmt_bold, result['account_a'], format_)
+    worksheet_write(worksheet, row, col_b, txt_account, fmt_bold, result['account_b'], format_)
+    row += 2
+
+    if result['has_pair']:
+        pass
+
+    workbook.close()
+
+
+def read_files_broker(dir_: str, files: list) -> dict:
+    keys = {}
+    for file in files:
+        if os.path.isdir(dir_ + file):
+            continue
+        try:
+            ti = BrokerTaxInvoice(dir_, file)
+            keys[ti.key] = ti
+        except IndexError:
+            # handle exception when there is a column missing in the file.
+            pass
+    return keys

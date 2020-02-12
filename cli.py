@@ -3,9 +3,11 @@ import os
 import click
 
 from src.model.taxinvoice import create_detailed_dir, create_summary_dir, PID
-from src.model.taxinvoice_referrer import create_summary_referrer, create_detailed_referrer, ReferrerTaxInvoice
-from src.model.taxinvoice_broker import create_summary_broker, create_detailed_broker, BrokerTaxInvoice
-from src.utils import merge_lists
+from src.model.taxinvoice_referrer import (create_summary_referrer, create_detailed_referrer,
+                                           read_files_referrer)
+from src.model.taxinvoice_broker import (create_summary_broker, create_detailed_broker,
+                                         read_files_broker)
+from src.utils import merge_lists, OKGREEN, ENDC
 
 
 # Constants
@@ -23,19 +25,17 @@ SUMMARY_REPORT = {
     SUMMARY: []
 }
 
-# Just a few colors to use in the console logs.
-RED = '\033[91m'
-ENDC = '\033[0m'
-OKGREEN = '\033[92m'
-
+DESC_LOOSE = 'Margin of error for a comparison between two numbers to be considered correct.'
 
 @click.group()
 def rcti():
     pass
 
 
+
+
 @click.command('compare_referrer')
-@click.option('-l', '--loose', type=int, default=0, help='Margin of error for a comparison to be considered correct.')
+@click.option('-l', '--loose', type=int, default=0, help=DESC_LOOSE)
 @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
@@ -47,8 +47,8 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     infynity_files = os.listdir(infynity_dir)
 
     invoices = {
-        LOANKIT: _read_files_referrer(loankit_dir, loankit_files),
-        INFYNITY: _read_files_referrer(infynity_dir, infynity_files)
+        LOANKIT: read_files_referrer(loankit_dir, loankit_files),
+        INFYNITY: read_files_referrer(infynity_dir, infynity_files)
     }
 
     # A list with all keys generated in both dicts
@@ -69,20 +69,20 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     create_summary_dir()
     create_detailed_dir()
 
-    print("Creating summary...")
-
+    print("Creating summary...", end='')
     create_summary_referrer(results)
+    print(OKGREEN + ' OK' + ENDC)
 
-    print("Creating detailed reports...")
-
+    print("Creating detailed reports...", end='')
     for result in results:
         create_detailed_referrer(result)
+    print(OKGREEN + ' OK' + ENDC)
 
     print("Finished.")
 
 
 @click.command('compare_broker')
-@click.option('-l', '--loose', type=int, default=0, help='Margin of error for a comparison to be considered correct.')
+@click.option('-l', '--loose', type=int, default=0, help=DESC_LOOSE)
 @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcit_compare_broker(loose, loankit_dir, infynity_dir):
@@ -93,8 +93,8 @@ def rcit_compare_broker(loose, loankit_dir, infynity_dir):
     infynity_files = list_files(infynity_dir)
 
     invoices = {
-        LOANKIT: _read_files_broker(loankit_dir, loankit_files),
-        INFYNITY: _read_files_broker(infynity_dir, infynity_files)
+        LOANKIT: read_files_broker(loankit_dir, loankit_files),
+        INFYNITY: read_files_broker(infynity_dir, infynity_files)
     }
 
     # A list with all keys generated in both dicts
@@ -115,17 +115,14 @@ def rcit_compare_broker(loose, loankit_dir, infynity_dir):
     create_summary_dir()
     create_detailed_dir()
 
-    print("Creating summary...")
-
+    print("Creating summary...", end='')
     create_summary_broker(results)
+    print(OKGREEN + ' OK' + ENDC)
 
-    # print(len(results))
-    print("Creating detailed reports...")
-
+    print("Creating detailed reports...", end='')
     for result in results:
         create_detailed_broker(result)
-
-    print("Finished.")
+    print(OKGREEN + ' OK' + ENDC)
 
 
 @click.command('compare_branch')
@@ -133,7 +130,7 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
     pass
 
 
-# Add subcomands to the CLI
+# Add subcommands to the CLI
 rcti.add_command(rcti_compare_referrer)
 rcti.add_command(rcit_compare_broker)
 rcti.add_command(rcti_compare_branch)
@@ -146,30 +143,6 @@ def list_files(dir_: str) -> list:
             if not entry.name.startswith('.') and not entry.name.startswith('~') and entry.is_file():
                 files.append(entry.name)
     return files
-
-
-def _read_files_referrer(dir_: str, files: list) -> dict:
-    keys = {}
-    for filename in files:
-        try:
-            ti = ReferrerTaxInvoice(dir_, filename)
-            keys[ti.key] = ti
-        except IndexError:
-            # handle exception when there is a column missing in the file.
-            pass
-    return keys
-
-
-def _read_files_broker(dir_: str, files: list) -> dict:
-    keys = {}
-    for file in files:
-        try:
-            ti = BrokerTaxInvoice(dir_, file)
-            keys[ti.key] = ti
-        except IndexError:
-            # handle exception when there is a column missing in the file.
-            pass
-    return keys
 
 
 def new_summary_row():

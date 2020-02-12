@@ -5,10 +5,16 @@ import os.path
 
 ENCODING = 'utf-8'
 PID = str(calendar.timegm(time.gmtime()))
+
 # OUTPUT_DIR = '/var/www/mystro.com/data/rcti_comparison/'
 OUTPUT_DIR = './Output/'
+
 OUTPUT_DIR_REFERRER = OUTPUT_DIR + 'referrer_rctis/'
 OUTPUT_DIR_REFERRER_PID = OUTPUT_DIR_REFERRER + PID + '/'
+
+OUTPUT_DIR_BROKER = OUTPUT_DIR + 'broker_rctis/'
+OUTPUT_DIR_BROKER_PID = OUTPUT_DIR_BROKER + PID + '/'
+
 OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
 OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
 
@@ -83,6 +89,12 @@ def create_detailed_dir():
     if not os.path.exists(OUTPUT_DIR_REFERRER_PID):
         os.mkdir(OUTPUT_DIR_REFERRER_PID)
 
+    if not os.path.exists(OUTPUT_DIR_BROKER):
+        os.mkdir(OUTPUT_DIR_BROKER)
+
+    if not os.path.exists(OUTPUT_DIR_BROKER_PID):
+        os.mkdir(OUTPUT_DIR_BROKER_PID)
+
 
 def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
               third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b=''):
@@ -138,3 +150,8 @@ def write_errors(errors: list, worksheet, row, col, header_fmt):
         row += 1
 
     return worksheet
+
+
+def worksheet_write(worksheet, row, col, label, fmt_label, value, fmt_value):
+    worksheet.write(row, col, label, fmt_label)
+    worksheet.write(row, col + 1, value, fmt_value)

@@ -1,3 +1,4 @@
+import os
 import copy
 import hashlib
 
@@ -5,8 +6,8 @@ from bs4 import BeautifulSoup
 import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_SUMMARY_PID,
-                                  OUTPUT_DIR_REFERRER_PID, new_error, write_errors)
-from src.utils import merge_lists, safelist
+                                  OUTPUT_DIR_REFERRER_PID, new_error, write_errors, worksheet_write)
+from src.utils import merge_lists, safelist, RED, YELLOW, ENDC
 
 
 class ReferrerTaxInvoice(TaxInvoice):
@@ -182,10 +183,15 @@ class ReferrerTaxInvoice(TaxInvoice):
                             use_key = k
                             break
             except ValueError:
-                print('\033[91mWARNING!')
-                print('StackTrace: You are trying to remove a record that is not in the keys list anymore')
-                print('This happens when the key is used to compare (not the full_key) and the wrong record is removed from the list')
-                print('\033[0m')
+                print(RED)
+                print('WARNING!')
+                print('This run is trying to remove a row record that is not in the keys list anymore')
+                print('This happens when the key is used to compare (not the full_key, therefor there may be a key clush) and the wrong record is removed from the list')
+                print('Check this file manually: ' + YELLOW + self.full_path)
+                print(RED + 'Contact the development team at petros.schilling@gmail.com if there is any questions')
+                print(ENDC)
+                # NOTE: Use this tutorial to learn about word similarity and fix the issue:
+                # https://towardsdatascience.com/calculating-string-similarity-in-python-276e18a7d33a
 
             if row_local is not None:
                 result_rows[use_key] = row_local.compare_to(row_invoice, margin, False)
@@ -496,105 +502,108 @@ def create_detailed_referrer(result: dict):
                                             'bg_color': 'black'})
 
     row = 0
-    col = 0
-    comparison_col = 8
+    col_a = 0
+    col_b = 8
 
     worksheet.merge_range('A1:N1', result['filename'])
     row += 2
 
+    txt_from = 'From'
     format_ = fmt_error if not result['equal_from'] else None
-    worksheet.write(row, col, 'From', fmt_bold)
-    worksheet.write(row, col + 1, result['from_value_1'], format_)
-    worksheet.write(row, comparison_col, 'From', fmt_bold)
-    worksheet.write(row, comparison_col + 1, result['from_value_2'], format_)
-
+    worksheet_write(worksheet, row, col_a, txt_from, fmt_bold, result['from_value_1'], format_)
+    worksheet_write(worksheet, row, col_b, txt_from, fmt_bold, result['from_value_2'], format_)
     row += 1
 
+    txt_from_abn = 'From ABN'
     format_ = fmt_error if not result['equal_from_abn'] else None
-    worksheet.write(row, col, 'From ABN', fmt_bold)
-    worksheet.write(row, col + 1, result['from_abn_value_1'], format_)
-    worksheet.write(row, comparison_col, 'From ABN', fmt_bold)
-    worksheet.write(row, comparison_col + 1, result['from_abn_value_2'], format_)
-
+    worksheet_write(worksheet, row, col_a, txt_from_abn, fmt_bold, result['from_abn_value_1'], format_)
+    worksheet_write(worksheet, row, col_b, txt_from_abn, fmt_bold, result['from_abn_value_2'], format_)
     row += 1
 
+    txt_to = 'To'
     format_ = fmt_error if not result['equal_to'] else None
-    worksheet.write(row, col, 'To', fmt_bold)
-    worksheet.write(row, col + 1, result['to_value_1'], format_)
-    worksheet.write(row, comparison_col, 'To', fmt_bold)
-    worksheet.write(row, comparison_col + 1, result['to_value_2'], format_)
-
+    worksheet_write(worksheet, row, col_a, txt_to, fmt_bold, result['to_value_1'], format_)
+    worksheet_write(worksheet, row, col_b, txt_to, fmt_bold, result['to_value_2'], format_)
     row += 1
 
+    txt_to_abn = 'To ABN'
     format_ = fmt_error if not result['equal_to_abn'] else None
-    worksheet.write(row, col, 'To ABN', fmt_bold)
-    worksheet.write(row, col + 1, result['to_abn_value_1'], format_)
-    worksheet.write(row, comparison_col, 'To ABN', fmt_bold)
-    worksheet.write(row, comparison_col + 1, result['to_abn_value_2'], format_)
-
+    worksheet_write(worksheet, row, col_a, txt_to_abn, fmt_bold, result['to_abn_value_1'], format_)
+    worksheet_write(worksheet, row, col_b, txt_to_abn, fmt_bold, result['to_abn_value_2'], format_)
     row += 2
 
     if result['has_pair']:
 
-        worksheet.write(row, col, 'Commission Type', fmt_table_header)
-        worksheet.write(row, col + 1, 'Client', fmt_table_header)
-        worksheet.write(row, col + 2, 'Referrer Name', fmt_table_header)
-        worksheet.write(row, col + 3, 'Amount Paid', fmt_table_header)
-        worksheet.write(row, col + 4, 'GST Paid', fmt_table_header)
-        worksheet.write(row, col + 5, 'Total Amount Paid', fmt_table_header)
+        worksheet.write(row, col_a, 'Commission Type', fmt_table_header)
+        worksheet.write(row, col_a + 1, 'Client', fmt_table_header)
+        worksheet.write(row, col_a + 2, 'Referrer Name', fmt_table_header)
+        worksheet.write(row, col_a + 3, 'Amount Paid', fmt_table_header)
+        worksheet.write(row, col_a + 4, 'GST Paid', fmt_table_header)
+        worksheet.write(row, col_a + 5, 'Total Amount Paid', fmt_table_header)
 
-        worksheet.write(row, comparison_col, 'Commission Type', fmt_table_header)
-        worksheet.write(row, comparison_col + 1, 'Client', fmt_table_header)
-        worksheet.write(row, comparison_col + 2, 'Referrer Name', fmt_table_header)
-        worksheet.write(row, comparison_col + 3, 'Amount Paid', fmt_table_header)
-        worksheet.write(row, comparison_col + 4, 'GST Paid', fmt_table_header)
-        worksheet.write(row, comparison_col + 5, 'Total Amount Paid', fmt_table_header)
+        worksheet.write(row, col_b, 'Commission Type', fmt_table_header)
+        worksheet.write(row, col_b + 1, 'Client', fmt_table_header)
+        worksheet.write(row, col_b + 2, 'Referrer Name', fmt_table_header)
+        worksheet.write(row, col_b + 3, 'Amount Paid', fmt_table_header)
+        worksheet.write(row, col_b + 4, 'GST Paid', fmt_table_header)
+        worksheet.write(row, col_b + 5, 'Total Amount Paid', fmt_table_header)
 
         for key in result['results_rows'].keys():
             row += 1
             result_row = result['results_rows'][key]
 
             format_ = fmt_error if not result_row['has_pair'] else None
-            worksheet.write(row, col, result_row['commission_type_value_1'], format_)
-            worksheet.write(row, col + 1, result_row['client_value_1'], format_)
-            worksheet.write(row, col + 2, result_row['referrer_value_1'], format_)
-            worksheet.write(row, comparison_col, result_row['commission_type_value_2'], format_)
-            worksheet.write(row, comparison_col + 1, result_row['client_value_2'], format_)
-            worksheet.write(row, comparison_col + 2, result_row['referrer_value_2'], format_)
+            worksheet.write(row, col_a, result_row['commission_type_value_1'], format_)
+            worksheet.write(row, col_a + 1, result_row['client_value_1'], format_)
+            worksheet.write(row, col_a + 2, result_row['referrer_value_1'], format_)
+            worksheet.write(row, col_b, result_row['commission_type_value_2'], format_)
+            worksheet.write(row, col_b + 1, result_row['client_value_2'], format_)
+            worksheet.write(row, col_b + 2, result_row['referrer_value_2'], format_)
 
             format_ = fmt_error if not result_row['amount_paid'] else None
-            worksheet.write(row, col + 3, result_row['amount_paid_value_1'], format_)
-            worksheet.write(row, comparison_col + 3, result_row['amount_paid_value_2'], format_)
+            worksheet.write(row, col_a + 3, result_row['amount_paid_value_1'], format_)
+            worksheet.write(row, col_b + 3, result_row['amount_paid_value_2'], format_)
 
             format_ = fmt_error if not result_row['gst_paid'] else None
-            worksheet.write(row, col + 4, result_row['gst_paid_value_1'], format_)
-            worksheet.write(row, comparison_col + 4, result_row['gst_paid_value_2'], format_)
+            worksheet.write(row, col_a + 4, result_row['gst_paid_value_1'], format_)
+            worksheet.write(row, col_b + 4, result_row['gst_paid_value_2'], format_)
 
             format_ = fmt_error if not result_row['total'] else None
-            worksheet.write(row, col + 5, result_row['total_value_1'], format_)
-            worksheet.write(row, comparison_col + 5, result_row['total_value_2'], format_)
+            worksheet.write(row, col_a + 5, result_row['total_value_1'], format_)
+            worksheet.write(row, col_b + 5, result_row['total_value_2'], format_)
 
     else:
-        worksheet.write(row, col, 'No match to compare to', fmt_error)
+        worksheet.write(row, col_a, 'No match to compare to', fmt_error)
 
     row += 2
 
+    txt_bsb = 'BSB'
     format_ = fmt_error if not result['equal_bsb'] else None
-    worksheet.write(row, col, 'BSB', fmt_bold)
-    worksheet.write(row, col + 1, result['bsb_value_1'], format_)
-    worksheet.write(row, comparison_col, 'BSB', fmt_bold)
-    worksheet.write(row, comparison_col + 1, result['bsb_value_2'], format_)
+    worksheet_write(worksheet, row, col_a, txt_bsb, fmt_bold, result['bsb_value_1'], format_)
+    worksheet_write(worksheet, row, col_b, txt_bsb, fmt_bold, result['bsb_value_2'], format_)
 
+    txt_account = 'Account'
     format_ = fmt_error if not result['equal_account'] else None
-    worksheet.write(row, col + 2, 'Account', fmt_bold)
-    worksheet.write(row, col + 3, result['account_value_1'], format_)
-    worksheet.write(row, comparison_col + 2, 'Account', fmt_bold)
-    worksheet.write(row, comparison_col + 3, result['account_value_2'], format_)
+    worksheet_write(worksheet, row, col_a + 2, txt_account, fmt_bold, result['account_value_1'], format_)
+    worksheet_write(worksheet, row, col_b + 2, txt_account, fmt_bold, result['account_value_2'], format_)
 
+    txt_amount_banked = 'Amount Banked'
     format_ = fmt_error if not result['equal_final_total'] else None
-    worksheet.write(row, col + 4, 'Amount Banked', fmt_bold)
-    worksheet.write(row, col + 5, result['final_total_value_1'], format_)
-    worksheet.write(row, comparison_col + 4, 'Amount Banked', fmt_bold)
-    worksheet.write(row, comparison_col + 5, result['final_total_value_2'], format_)
+    worksheet_write(worksheet, row, col_a + 4, txt_amount_banked, fmt_bold, result['final_total_value_1'], format_)
+    worksheet_write(worksheet, row, col_b + 4, txt_amount_banked, fmt_bold, result['final_total_value_2'], format_)
 
     workbook.close()
+
+
+def read_files_referrer(dir_: str, files: list) -> dict:
+    keys = {}
+    for file in files:
+        if os.path.isdir(dir_ + file):
+            continue
+        try:
+            ti = ReferrerTaxInvoice(dir_, file)
+            keys[ti.key] = ti
+        except IndexError:
+            # handle exception when there is a column missing in the file.
+            pass
+    return keys
