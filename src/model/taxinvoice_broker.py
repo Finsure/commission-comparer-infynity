@@ -128,10 +128,10 @@ class BrokerTaxInvoice(TaxInvoice):
             else:
                 result_rows[use_key] = row_invoice.compare_to(row_local, margin, True)
 
-            result['results_rows'] = result_rows
+        result['results_rows'] = result_rows
 
-            for key in result['results_rows'].keys():
-                result['overall'] = result['overall'] and result['results_rows'][key]['overall']
+        for key in result['results_rows'].keys():
+            result['overall'] = result['overall'] and result['results_rows'][key]['overall']
 
             return result
 
@@ -178,7 +178,7 @@ class BrokerInvoiceRow(InvoiceRow):
         sha.update(self.commission_type.encode(ENCODING))
         sha.update(self.client.encode(ENCODING))
         sha.update(self.reference_id.encode(ENCODING))
-        sha.update(self.bank.encode(ENCODING))
+        # sha.update(self.bank.encode(ENCODING))
         return sha.hexdigest()
 
     def __generate_key_full(self):
@@ -206,15 +206,17 @@ class BrokerInvoiceRow(InvoiceRow):
         equal_gst_paid = False
         equal_total_amount_paid = False
         equal_comments = False
+        equal_bank = False
 
         if has_pair:
+            equal_bank = self.bank == row.bank
             equal_loan_balance = self.compare_numbers(self.loan_balance, row.loan_balance, margin)
             equal_amount_paid = self.compare_numbers(self.amount_paid, row.amount_paid, margin)
             equal_gst_paid = self.compare_numbers(self.gst_paid, row.gst_paid, margin)
             equal_total_amount_paid = self.compare_numbers(self.total_amount_paid, row.total_amount_paid, margin)
             equal_comments = self.comments == row.comments
 
-        overall = equal_loan_balance and equal_amount_paid and equal_gst_paid and equal_total_amount_paid and equal_comments
+        overall = equal_bank and equal_loan_balance and equal_amount_paid and equal_gst_paid and equal_total_amount_paid and equal_comments
 
         a = 'a'
         b = 'b'
@@ -223,6 +225,7 @@ class BrokerInvoiceRow(InvoiceRow):
             b = 'a'
 
         result['overall'] = overall
+        result['bank'] = equal_bank
         result['loan_balance'] = equal_loan_balance
         result['amount_paid'] = equal_amount_paid
         result['gst_paid'] = equal_gst_paid
@@ -271,6 +274,10 @@ def result_row_broker():
         'client_b': '',
         'reference_id_a': '',
         'reference_id_b': '',
+        'bank_a': '',
+        'bank_b': '',
+        'loan_balance_a': '',
+        'loan_balance_b': '',
         'amount_paid_a': '',
         'amount_paid_b': '',
         'gst_paid_a': '',
@@ -402,17 +409,30 @@ def create_summary_broker(results: list):
     workbook.close()
 
 
+def _write_table_header(worksheet, row, col, format):
+    worksheet.write(row, col, 'Commission Type', format)
+    worksheet.write(row, col + 1, 'Client', format)
+    worksheet.write(row, col + 2, 'Commission Ref ID', format)
+    worksheet.write(row, col + 3, 'Bank', format)
+    worksheet.write(row, col + 4, 'Loan Balance', format)
+    worksheet.write(row, col + 5, 'Amount Paid', format)
+    worksheet.write(row, col + 6, 'GST Paid', format)
+    worksheet.write(row, col + 7, 'Total Amount Paid', format)
+    worksheet.write(row, col + 8, 'Comments', format)
+
+
 def create_detailed_broker(result: dict):
     if result['overall']:
         return
 
-    workbook = xlsxwriter.Workbook(OUTPUT_DIR_BROKER_PID + 'DETAILED_' + result['filename'] + '.xlsx')
+    suffix = '' if result['filename'].endswith('.xlsx') else '.xlsx'
+
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_BROKER_PID + 'DETAILED_' + result['filename'] + suffix)
     worksheet = workbook.add_worksheet('Detailed')
 
     fmt_error = workbook.add_format({'font_color': 'red'})
     fmt_bold = workbook.add_format({'bold': True})
-    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
-                                            'bg_color': 'black'})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
 
     row = 0
     col_a = 0
@@ -452,7 +472,50 @@ def create_detailed_broker(result: dict):
     row += 2
 
     if result['has_pair']:
-        pass
+
+        _write_table_header(worksheet, row, col_a, fmt_table_header)
+        _write_table_header(worksheet, row, col_b, fmt_table_header)
+
+        for key in result['results_rows'].keys():
+            # print(key)
+            row += 1
+            result_row = result['results_rows'][key]
+
+            format_ = fmt_error if not result_row['has_pair'] else None
+            worksheet.write(row, col_a, result_row['commission_type_a'], format_)
+            worksheet.write(row, col_a + 1, result_row['client_a'], format_)
+            worksheet.write(row, col_a + 2, result_row['reference_id_a'], format_)
+
+            worksheet.write(row, col_b, result_row['commission_type_b'], format_)
+            worksheet.write(row, col_b + 1, result_row['client_b'], format_)
+            worksheet.write(row, col_b + 2, result_row['reference_id_b'], format_)
+
+            format_ = fmt_error if not result_row['bank'] else None
+            worksheet.write(row, col_a + 3, result_row['bank_a'], format_)
+            worksheet.write(row, col_b + 3, result_row['bank_b'], format_)
+
+            format_ = fmt_error if not result_row['loan_balance'] else None
+            worksheet.write(row, col_a + 4, result_row['loan_balance_a'], format_)
+            worksheet.write(row, col_b + 4, result_row['loan_balance_b'], format_)
+
+            format_ = fmt_error if not result_row['amount_paid'] else None
+            worksheet.write(row, col_a + 5, result_row['amount_paid_a'], format_)
+            worksheet.write(row, col_b + 5, result_row['amount_paid_b'], format_)
+
+            format_ = fmt_error if not result_row['gst_paid'] else None
+            worksheet.write(row, col_a + 6, result_row['gst_paid_a'], format_)
+            worksheet.write(row, col_b + 6, result_row['gst_paid_b'], format_)
+
+            format_ = fmt_error if not result_row['total_amount_paid'] else None
+            worksheet.write(row, col_a + 7, result_row['total_amount_paid_a'], format_)
+            worksheet.write(row, col_b + 7, result_row['total_amount_paid_b'], format_)
+
+            format_ = fmt_error if not result_row['comments'] else None
+            worksheet.write(row, col_a + 8, result_row['comments_a'], format_)
+            worksheet.write(row, col_b + 8, result_row['comments_b'], format_)
+
+    else:
+        worksheet.write(row, col_a, 'No match to compare to', fmt_error)
 
     workbook.close()
 

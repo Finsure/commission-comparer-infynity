@@ -35,7 +35,7 @@ def rcti():
 
 
 @click.command('compare_referrer')
-@click.option('-l', '--loose', type=int, default=0, help=DESC_LOOSE)
+@click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
 @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
@@ -82,7 +82,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
 
 
 @click.command('compare_broker')
-@click.option('-l', '--loose', type=int, default=0, help=DESC_LOOSE)
+@click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
 @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcit_compare_broker(loose, loankit_dir, infynity_dir):

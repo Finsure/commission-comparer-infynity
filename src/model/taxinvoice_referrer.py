@@ -487,19 +487,29 @@ def create_summary_referrer(results: list):
     workbook.close()
 
 
+def _write_table_header(worksheet, row, col, format):
+    worksheet.write(row, col, 'Commission Type', format)
+    worksheet.write(row, col + 1, 'Client', format)
+    worksheet.write(row, col + 2, 'Referrer Name', format)
+    worksheet.write(row, col + 3, 'Amount Paid', format)
+    worksheet.write(row, col + 4, 'GST Paid', format)
+    worksheet.write(row, col + 5, 'Total Amount Paid', format)
+
+
 # I promise there was no other way! :(
 def create_detailed_referrer(result: dict):
     # If there is no error we dont need to generate this report.
     if result['overall']:
         return
 
-    workbook = xlsxwriter.Workbook(OUTPUT_DIR_REFERRER_PID + 'DETAILED_' + result['filename'] + '.xlsx')
+    suffix = '' if result['filename'].endswith('.xlsx') else '.xlsx'
+
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_REFERRER_PID + 'DETAILED_' + result['filename'] + suffix)
     worksheet = workbook.add_worksheet('Detailed')
 
     fmt_error = workbook.add_format({'font_color': 'red'})
     fmt_bold = workbook.add_format({'bold': True})
-    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
-                                            'bg_color': 'black'})
+    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
 
     row = 0
     col_a = 0
@@ -534,19 +544,8 @@ def create_detailed_referrer(result: dict):
 
     if result['has_pair']:
 
-        worksheet.write(row, col_a, 'Commission Type', fmt_table_header)
-        worksheet.write(row, col_a + 1, 'Client', fmt_table_header)
-        worksheet.write(row, col_a + 2, 'Referrer Name', fmt_table_header)
-        worksheet.write(row, col_a + 3, 'Amount Paid', fmt_table_header)
-        worksheet.write(row, col_a + 4, 'GST Paid', fmt_table_header)
-        worksheet.write(row, col_a + 5, 'Total Amount Paid', fmt_table_header)
-
-        worksheet.write(row, col_b, 'Commission Type', fmt_table_header)
-        worksheet.write(row, col_b + 1, 'Client', fmt_table_header)
-        worksheet.write(row, col_b + 2, 'Referrer Name', fmt_table_header)
-        worksheet.write(row, col_b + 3, 'Amount Paid', fmt_table_header)
-        worksheet.write(row, col_b + 4, 'GST Paid', fmt_table_header)
-        worksheet.write(row, col_b + 5, 'Total Amount Paid', fmt_table_header)
+        _write_table_header(worksheet, row, col_a, fmt_table_header)
+        _write_table_header(worksheet, row, col_b, fmt_table_header)
 
         for key in result['results_rows'].keys():
             row += 1
