@@ -15,6 +15,9 @@ OUTPUT_DIR_REFERRER_PID = OUTPUT_DIR_REFERRER + PID + '/'
 OUTPUT_DIR_BROKER = OUTPUT_DIR + 'broker_rctis/'
 OUTPUT_DIR_BROKER_PID = OUTPUT_DIR_BROKER + PID + '/'
 
+OUTPUT_DIR_BRANCH = OUTPUT_DIR + 'branch_rctis/'
+OUTPUT_DIR_BRANCH_PID = OUTPUT_DIR_BRANCH + PID + '/'
+
 OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
 OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
 
@@ -54,15 +57,18 @@ class InvoiceRow:
         n1val = n1
         n2val = n2
 
-        if n1 or n2 == '':
-            return False
-
-        if type(n1) == str:
+        if str(n1).startswith('$'):
             n1val = float(n1[-1:])  # remove $
-        if type(n2) == str:
+        if str(n2).startswith('$'):
             n2val = float(n2[-1:])  # remove $
 
-        return abs(n1val - n2val) <= margin
+        try:
+            n1val = float(n1val)
+            n2val = float(n2val)
+        except ValueError:
+            return False
+
+        return abs(n1val - n2val) <= margin + 0.000001
 
     def serialize(self):
         return self.__dict__
@@ -95,11 +101,18 @@ def create_detailed_dir():
     if not os.path.exists(OUTPUT_DIR_BROKER_PID):
         os.mkdir(OUTPUT_DIR_BROKER_PID)
 
+    if not os.path.exists(OUTPUT_DIR_BRANCH):
+        os.mkdir(OUTPUT_DIR_BRANCH)
+
+    if not os.path.exists(OUTPUT_DIR_BRANCH_PID):
+        os.mkdir(OUTPUT_DIR_BRANCH_PID)
+
 
 def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
-              third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b=''):
+              third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b='', tab=''):
     return {
         'file': file,
+        'tab': tab,
         'msg': msg,
         'line': line,
         'first_a': first_a,
@@ -118,35 +131,37 @@ def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b=
 def write_errors(errors: list, worksheet, row, col, header_fmt):
     # Write summary header
     worksheet.write(row, col, 'File', header_fmt)
-    worksheet.write(row, col + 1, 'Message', header_fmt)
-    worksheet.write(row, col + 2, 'Line', header_fmt)
-    worksheet.write(row, col + 3, 'First Value', header_fmt)
-    worksheet.write(row, col + 4, 'First To Compare', header_fmt)
-    worksheet.write(row, col + 5, 'Second Value', header_fmt)
-    worksheet.write(row, col + 6, 'Second To Compare', header_fmt)
-    worksheet.write(row, col + 7, 'Third Value', header_fmt)
-    worksheet.write(row, col + 8, 'Third To Compare', header_fmt)
-    worksheet.write(row, col + 9, 'Fourth Value', header_fmt)
-    worksheet.write(row, col + 10, 'Fourth To Compare', header_fmt)
-    worksheet.write(row, col + 11, 'Fifth Value', header_fmt)
-    worksheet.write(row, col + 12, 'Fifth To Compare', header_fmt)
+    worksheet.write(row, col + 1, 'Tab', header_fmt)
+    worksheet.write(row, col + 2, 'Message', header_fmt)
+    worksheet.write(row, col + 3, 'Line', header_fmt)
+    worksheet.write(row, col + 4, 'First Value', header_fmt)
+    worksheet.write(row, col + 5, 'First To Compare', header_fmt)
+    worksheet.write(row, col + 6, 'Second Value', header_fmt)
+    worksheet.write(row, col + 7, 'Second To Compare', header_fmt)
+    worksheet.write(row, col + 8, 'Third Value', header_fmt)
+    worksheet.write(row, col + 9, 'Third To Compare', header_fmt)
+    worksheet.write(row, col + 10, 'Fourth Value', header_fmt)
+    worksheet.write(row, col + 11, 'Fourth To Compare', header_fmt)
+    worksheet.write(row, col + 12, 'Fifth Value', header_fmt)
+    worksheet.write(row, col + 13, 'Fifth To Compare', header_fmt)
     row += 1
 
     # Write errors
     for error in errors:
         worksheet.write(row, col, error['file'])
-        worksheet.write(row, col + 1, error['msg'])
-        worksheet.write(row, col + 2, error['line'])
-        worksheet.write(row, col + 3, error['first_a'])
-        worksheet.write(row, col + 4, error['first_b'])
-        worksheet.write(row, col + 5, error['second_a'])
-        worksheet.write(row, col + 6, error['second_b'])
-        worksheet.write(row, col + 7, error['third_a'])
-        worksheet.write(row, col + 8, error['third_b'])
-        worksheet.write(row, col + 9, error['fourth_a'])
-        worksheet.write(row, col + 10, error['fourth_b'])
-        worksheet.write(row, col + 11, error['fifth_a'])
-        worksheet.write(row, col + 12, error['fifth_b'])
+        worksheet.write(row, col + 1, error['tab'])
+        worksheet.write(row, col + 2, error['msg'])
+        worksheet.write(row, col + 3, error['line'])
+        worksheet.write(row, col + 4, error['first_a'])
+        worksheet.write(row, col + 5, error['first_b'])
+        worksheet.write(row, col + 6, error['second_a'])
+        worksheet.write(row, col + 7, error['second_b'])
+        worksheet.write(row, col + 8, error['third_a'])
+        worksheet.write(row, col + 9, error['third_b'])
+        worksheet.write(row, col + 10, error['fourth_a'])
+        worksheet.write(row, col + 11, error['fourth_b'])
+        worksheet.write(row, col + 12, error['fifth_a'])
+        worksheet.write(row, col + 13, error['fifth_b'])
         row += 1
 
     return worksheet

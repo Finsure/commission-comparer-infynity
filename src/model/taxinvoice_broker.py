@@ -108,8 +108,8 @@ class BrokerTaxInvoice(TaxInvoice):
             row_invoice = invoice.rows.get(key, None)
             use_key = key
 
-            # If we couldnt find the row by the ReferrerInvoiceRow.full_key() it means they are different
-            # so we try to locate them by the ReferrerInvoiceRow.key()
+            # If we couldnt find the row by the BrokerInvoiceRow.full_key() it means they are different
+            # so we try to locate them by the BrokerInvoiceRow.key()
             if row_local is None:
                 for k in self.rows.keys():
                     if self.rows.get(k).key == row_invoice.key:
@@ -316,7 +316,7 @@ def result_invoice_broker():
 
 
 def create_summary_broker(results: list):
-    workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'referrer_rcti_summary.xlsx')
+    workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'broker_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
 
     row = 0
@@ -326,7 +326,7 @@ def create_summary_broker(results: list):
     fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
                                             'bg_color': 'black'})
 
-    worksheet.merge_range('A1:I1', 'Commission Referrer RCTI Summary', fmt_title)
+    worksheet.merge_range('A1:I1', 'Commission Broker RCTI Summary', fmt_title)
     row += 2
 
     list_errors = []
@@ -341,21 +341,21 @@ def create_summary_broker(results: list):
                 list_errors.append(error)
                 continue
 
-                # From does not match
+            # From does not match
             if not result['equal_from']:
-                msg = 'From name does not match'
+                msg = 'From does not match'
                 error = new_error(file, msg, '', result['from_a'], result['from_b'])
                 list_errors.append(error)
 
             # From ABN does not match
             if not result['equal_abn']:
-                msg = 'From ABN does not match'
+                msg = 'ABN does not match'
                 error = new_error(file, msg, '', result['abn_a'], result['abn_b'])
                 list_errors.append(error)
 
             # To does not match
             if not result['equal_to']:
-                msg = 'To name does not match'
+                msg = 'To does not match'
                 error = new_error(file, msg, '', result['to_a'], result['to_b'])
                 list_errors.append(error)
 
@@ -397,12 +397,17 @@ def create_summary_broker(results: list):
                     if not result_row['comments']:
                         values_list.append(result_row['comments_a'])
                         values_list.append(result_row['comments_b'])
+                    if not result['equal_bank']:
+                        values_list.append(result_row['bank_a'])
+                        values_list.append(result_row['bank_b'])
 
                     msg = 'Values not match'
                     error = new_error(file, msg, result_row['row_number'], values_list.get(0, ''),
                                       values_list.get(1, ''), values_list.get(2, ''),
                                       values_list.get(3, ''), values_list.get(4, ''),
-                                      values_list.get(5, ''))
+                                      values_list.get(5, ''), values_list.get(6, ''),
+                                      values_list.get(7, ''), values_list.get(8, ''),
+                                      values_list.get(9, ''))
                     list_errors.append(error)
 
     worksheet = write_errors(list_errors, worksheet, row, col, fmt_table_header)
