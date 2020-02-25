@@ -205,16 +205,16 @@ if __name__ == '__main__':
     # rcti()
     rcti_compare_branch(
         0.0,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/Branch/Loankit/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/Branch/Infynity/')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
 
 # SIMULATE REFERRER
-# python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Loankit/Sent/" "/Users/petrosschilling/dev/commission-comparer-infynity/Referrers/Infynity/Sent/"
+# python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/"
 
 # SIMULATE BROKER
-# python cli.py compare_broker -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Brokers/Loankit/" "/Users/petrosschilling/dev/commission-comparer-infynity/Brokers/Infynity/"
+# python cli.py compare_broker -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/"
 
 # SIMULATE BRANCH
-# python cli.py compare_branch -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/Branch/Loankit/" "/Users/petrosschilling/dev/commission-comparer-infynity/Branch/Infynity/"
+# python cli.py compare_branch -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/"
 
 # python app.py --help
