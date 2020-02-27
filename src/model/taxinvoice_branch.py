@@ -87,14 +87,14 @@ class BranchTaxInvoice(TaxInvoice):
 
     def parse_tab_vbi_data(self, tab):
         try:
-            vbi_dataframe = pandas.read_excel(self.full_path, sheet_name=tab)
-            vbi_dataframe = vbi_dataframe.dropna(how='all')
-            vbi_dataframe = vbi_dataframe.replace(numpy.nan, '', regex=True)
-            vbi_dataframe = vbi_dataframe.replace('--', ' ', regex=True)
-            if vbi_dataframe.columns[0] != 'Broker':
-                vbi_dataframe = vbi_dataframe.rename(columns=vbi_dataframe.iloc[0]).drop(vbi_dataframe.index[0])
+            df = pandas.read_excel(self.full_path, sheet_name=tab)
+            df = df.dropna(how='all')
+            df = df.replace(numpy.nan, '', regex=True)
+            df = df.replace('--', ' ', regex=True)
+            if df.columns[0] != 'Broker':
+                df = df.rename(columns=df.iloc[0]).drop(df.index[0])
 
-            for index, row in vbi_dataframe.iterrows():
+            for index, row in df.iterrows():
                 vbidatarow = VBIDataRow(
                     row['Broker'],
                     row['Lender'],
@@ -117,18 +117,17 @@ class BranchTaxInvoice(TaxInvoice):
                 elif tab == TAB_UPFRONT_DATA:
                     self.upfront_data_rows[vbidatarow.key] = vbidatarow
         except XLRDError:
-            # TODO Handle the error when the tab doesnt exist
             pass
 
     def parse_tab_trail_data(self):
-        trail_dataframe = pandas.read_excel(self.full_path, sheet_name=TAB_TRAIL_DATA)
-        trail_dataframe = trail_dataframe.dropna(how='all')
-        trail_dataframe = trail_dataframe.replace(numpy.nan, '', regex=True)
-        trail_dataframe = trail_dataframe.replace('--', ' ', regex=True)
-        if trail_dataframe.columns[0] != 'Broker':
-            trail_dataframe = trail_dataframe.rename(columns=trail_dataframe.iloc[0]).drop(trail_dataframe.index[0])
+        df = pandas.read_excel(self.full_path, sheet_name=TAB_TRAIL_DATA)
+        df = df.dropna(how='all')
+        df = df.replace(numpy.nan, '', regex=True)
+        df = df.replace('--', ' ', regex=True)
+        if df.columns[0] != 'Broker':
+            df = df.rename(columns=df.iloc[0]).drop(df.index[0])
 
-        for index, row in trail_dataframe.iterrows():
+        for index, row in df.iterrows():
             traildatarow = TrailDataRow(
                 row['Broker'],
                 row['Lender'],
@@ -149,58 +148,58 @@ class BranchTaxInvoice(TaxInvoice):
             self.trail_data_rows[traildatarow.key] = traildatarow
 
     def parse_tab_tax_invoice(self):
-        tax_invoice_dataframe = pandas.read_excel(self.full_path, sheet_name=TAB_TAX_INVOICE)
-        if tax_invoice_dataframe.iloc[1]['Tax Invoice Summary'] == 'Date:':
-            tax_invoice_dataframe = tax_invoice_dataframe.drop(index=1)
+        df = pandas.read_excel(self.full_path, sheet_name=TAB_TAX_INVOICE)
+        if df.iloc[1]['Tax Invoice Summary'] == 'Date:':
+            df = df.drop(index=1)
 
-        tax_invoice_dataframe = tax_invoice_dataframe.replace(' ', numpy.nan, regex=False)
-        tax_invoice_dataframe = tax_invoice_dataframe.dropna(how='all')
-        tax_invoice_dataframe = tax_invoice_dataframe.replace(numpy.nan, '', regex=True)
+        df = df.replace(' ', numpy.nan, regex=False)
+        df = df.dropna(how='all')
+        df = df.replace(numpy.nan, '', regex=True)
 
-        self.tax_invoice_from = tax_invoice_dataframe.iloc[0][1].strip()
-        self.tax_invoice_from_abn = tax_invoice_dataframe.iloc[1][1].strip()
-        self.tax_invoice_to = tax_invoice_dataframe.iloc[2][1].strip()
-        self.tax_invoice_to_abn = tax_invoice_dataframe.iloc[3][1].strip()
+        self.tax_invoice_from = df.iloc[0][1].strip()
+        self.tax_invoice_from_abn = df.iloc[1][1].strip()
+        self.tax_invoice_to = df.iloc[2][1].strip()
+        self.tax_invoice_to_abn = df.iloc[3][1].strip()
 
-        tax_invoice_dataframe_a = tax_invoice_dataframe[5:17]
-        tax_invoice_dataframe_b = tax_invoice_dataframe[18:len(tax_invoice_dataframe)]
+        df_a = df[5:17]
+        df_b = df[18:len(df)]
 
-        for index, row in tax_invoice_dataframe_a.iterrows():
+        for index, row in df_a.iterrows():
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
             self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
 
-        for index, row in tax_invoice_dataframe_b.iterrows():
+        for index, row in df_b.iterrows():
             invoicerow = TaxInvoiceDataRow(' '.join(row[0].split()), row[1], row[2], row[3], row[4], index)
             self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
 
     def parse_tab_rcti(self):
-        rcti_dataframe = pandas.read_excel(self.full_path, sheet_name=TAB_RCTI)
-        rcti_dataframe = rcti_dataframe.replace(' ', numpy.nan, regex=False)
-        rcti_dataframe = rcti_dataframe.dropna(how='all')
-        rcti_dataframe = rcti_dataframe.replace(numpy.nan, '', regex=True)
+        df = pandas.read_excel(self.full_path, sheet_name=TAB_RCTI)
+        df = df.replace(' ', numpy.nan, regex=False)
+        df = df.dropna(how='all')
+        df = df.replace(numpy.nan, '', regex=True)
 
-        self.rcti_from = str(rcti_dataframe.iloc[1][1]).strip()
-        self.rcti_from_abn = str(rcti_dataframe.iloc[2][1]).strip()
-        self.rcti_to = str(rcti_dataframe.iloc[3][1]).strip()
-        self.rcti_to_abn = str(rcti_dataframe.iloc[4][1]).strip()
+        self.rcti_from = str(df.iloc[1][1]).strip()
+        self.rcti_from_abn = str(df.iloc[2][1]).strip()
+        self.rcti_to = str(df.iloc[3][1]).strip()
+        self.rcti_to_abn = str(df.iloc[4][1]).strip()
 
-        rcti_dataframe = rcti_dataframe[7:len(rcti_dataframe)]
+        df = df[7:len(df)]
 
-        for index, row in rcti_dataframe.iterrows():
+        for index, row in df.iterrows():
             rctirow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
             self.rcti_data_rows[rctirow.key] = rctirow
 
     def parse_tab_summary(self):
-        summary_dataframe = pandas.read_excel(self.full_path, sheet_name=TAB_SUMMARY)
-        summary_dataframe = summary_dataframe.replace(' ', numpy.nan, regex=False)
-        summary_dataframe = summary_dataframe.dropna(how='all')
-        summary_dataframe = summary_dataframe.replace(numpy.nan, '', regex=True)
+        df = pandas.read_excel(self.full_path, sheet_name=TAB_SUMMARY)
+        df = df.replace(' ', numpy.nan, regex=False)
+        df = df.dropna(how='all')
+        df = df.replace(numpy.nan, '', regex=True)
 
-        if summary_dataframe.iloc[0][0].strip() == 'Date:':
-            summary_dataframe = summary_dataframe.drop(index=1)
+        if df.iloc[0][0].strip() == 'Date:':
+            df = df.drop(index=1)
 
-        self.summary_from = summary_dataframe.iloc[1][1].strip()
-        self.summary_to = summary_dataframe.iloc[2][1].strip()
+        self.summary_from = df.iloc[1][1].strip()
+        self.summary_to = df.iloc[2][1].strip()
 
         # Firstly we need to find out what are each section's start and end indexes
         section1_start = None
@@ -216,7 +215,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         current_section = 0
         index = 0
-        for i, row in summary_dataframe.iterrows():
+        for i, row in df.iterrows():
             if row[0].lower() == 'carried forward balance':
                 current_section = 1
                 section1_start = index
@@ -249,11 +248,11 @@ class BranchTaxInvoice(TaxInvoice):
             index += 1
 
         # Now we have each section's dataframe
-        section1_df = summary_dataframe[section1_start:section1_end]
-        section2_df = summary_dataframe[section2_start:section2_end]
-        section3_df = summary_dataframe[section3_start:section3_end]
-        section4_df = summary_dataframe[section4_start:section4_end]
-        section5_df = summary_dataframe[section5_start:section5_end]
+        section1_df = df[section1_start:section1_end]
+        section2_df = df[section2_start:section2_end]
+        section3_df = df[section3_start:section3_end]
+        section4_df = df[section4_start:section4_end]
+        section5_df = df[section5_start:section5_end]
 
         # Iterate through each section and create the rows.
         # In this case we can use the RCTIDataRow bc the data matches it HURRAY!!!
@@ -363,8 +362,7 @@ class BranchTaxInvoice(TaxInvoice):
         # endregion
 
         # region RCTI Section
-        tab_rcti = 'RCTI'
-        worksheet_rcti = workbook.add_worksheet(tab_rcti)
+        worksheet_rcti = workbook.add_worksheet(TAB_RCTI)
         row = 0
         col_a = 0
         col_b = 5
@@ -405,16 +403,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if self.equal_rcti_from:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From', self.rcti_from, self.pair.rcti_from, tab=tab_rcti))
+                    self.filename, 'From', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
             if self.equal_rcti_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From ABN', self.rcti_from_abn, self.pair.rcti_from_abn, tab=tab_rcti))
+                    self.filename, 'From ABN', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
             if self.equal_rcti_to:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To', self.rcti_to, self.pair.rcti_to, tab=tab_rcti))
+                    self.filename, 'To', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
             if self.equal_rcti_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To ABN', self.rcti_to_abn, self.pair.rcti_to_abn, tab=tab_rcti))
+                    self.filename, 'To ABN', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
 
         row += 2
 
@@ -448,8 +446,7 @@ class BranchTaxInvoice(TaxInvoice):
         # endregion
 
         # region Tax Invoice Section
-        tab_tax_invoice = 'Tax Invoice'
-        worksheet_tax_invoice = workbook.add_worksheet(tab_tax_invoice)
+        worksheet_tax_invoice = workbook.add_worksheet(TAB_TAX_INVOICE)
         row = 0
         col_a = 0
         col_b = 6
@@ -490,16 +487,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if self.equal_tax_invoice_from:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From', self.tax_invoice_from, self.pair.tax_invoice_from, tab=tab_tax_invoice))
+                    self.filename, 'From', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From ABN', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=tab_tax_invoice))
+                    self.filename, 'From ABN', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_to:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To', self.tax_invoice_to, self.pair.tax_invoice_to, tab=tab_tax_invoice))
+                    self.filename, 'To', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To ABN', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=tab_tax_invoice))
+                    self.filename, 'To ABN', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
 
         row += 2
 
@@ -564,8 +561,7 @@ class BranchTaxInvoice(TaxInvoice):
         # endregion
 
         # region Upfront Data Section
-        tabname = 'Upfront Data'
-        worksheet_upfront = workbook.add_worksheet(tabname)
+        worksheet_upfront = workbook.add_worksheet(TAB_UPFRONT_DATA)
         row = 0
         col_a = 0
         col_b = 16
@@ -588,22 +584,22 @@ class BranchTaxInvoice(TaxInvoice):
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += VBIDataRow.write_row(
-                    self.full_path, worksheet_upfront, pair_row, row, fmt_error, tabname, 'right')
+                    self.full_path, worksheet_upfront, pair_row, row, fmt_error, TAB_UPFRONT_DATA, 'right')
 
             self.summary_errors += VBIDataRow.write_row(
-                self.pair.full_path, worksheet_upfront, self_row, row, fmt_error, tabname)
+                self.pair.full_path, worksheet_upfront, self_row, row, fmt_error, TAB_UPFRONT_DATA)
             row += 1
 
-        # # Write unmatched records
-        # alone_keys_infynity = set(self.pair.upfront_data_rows.keys() - set(self.upfront_data_rows.keys()))
-        # for key in alone_keys_infynity:
-        #     self.summary_errors += VBIDataRow.write_row(
-        #         self.pair.full_path, worksheet_upfront, self.pair.upfront_data_rows[key], row, fmt_error, tabname, 'right')
-        #     row += 1
+        # Write unmatched records
+        alone_keys_infynity = set(self.pair.upfront_data_rows.keys() - set(self.upfront_data_rows.keys()))
+        for key in alone_keys_infynity:
+            self.summary_errors += VBIDataRow.write_row(
+                self.pair.full_path, worksheet_upfront, self.pair.upfront_data_rows[key], row, fmt_error, TAB_UPFRONT_DATA, 'right')
+            row += 1
         # endregion
 
         # region Trail Data Section
-        worksheet_trail = workbook.add_worksheet('Trail Data')
+        worksheet_trail = workbook.add_worksheet(TAB_TRAIL_DATA)
         row = 0
         col_a = 0
         col_b = 16
@@ -641,8 +637,7 @@ class BranchTaxInvoice(TaxInvoice):
         # endregion
 
         # region Vbi Data Section
-        tabname = 'Vbi Data'
-        worksheet_vbi = workbook.add_worksheet(tabname)
+        worksheet_vbi = workbook.add_worksheet(TAB_VBI_DATA)
         row = 0
         col_a = 0
         col_b = 16
@@ -665,17 +660,17 @@ class BranchTaxInvoice(TaxInvoice):
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += VBIDataRow.write_row(
-                    self.full_path, worksheet_vbi, pair_row, row, fmt_error, tabname, 'right')
+                    self.full_path, worksheet_vbi, pair_row, row, fmt_error, TAB_VBI_DATA, 'right')
 
             self.summary_errors += VBIDataRow.write_row(
-                self.pair.full_path, worksheet_vbi, self_row, row, fmt_error, tabname)
+                self.pair.full_path, worksheet_vbi, self_row, row, fmt_error, TAB_VBI_DATA)
             row += 1
 
         # Write unmatched records
         alone_keys_infynity = set(self.pair.vbi_data_rows.keys() - set(self.vbi_data_rows.keys()))
         for key in alone_keys_infynity:
             self.summary_errors += VBIDataRow.write_row(
-                self.pair.full_path, worksheet_vbi, self.pair.vbi_data_rows[key], row, fmt_error, tabname, 'right')
+                self.pair.full_path, worksheet_vbi, self.pair.vbi_data_rows[key], row, fmt_error, TAB_VBI_DATA, 'right')
             row += 1
         # endregion
 
@@ -767,7 +762,7 @@ class VBIDataRow(InvoiceRow):
         self.broker = broker.strip()
         self.lender = lender.strip()
         self.client = client.strip()
-        self.ref_no = str(ref_no).strip()
+        self.ref_no = str(ref_no).strip().split('.')[0]
         self.referrer = referrer.strip()
         self.settled_loan = settled_loan
         self.settlement_date = settlement_date
