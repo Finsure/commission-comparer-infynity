@@ -164,6 +164,13 @@ class BranchTaxInvoice(TaxInvoice):
         df_a = df[5:17]
         df_b = df[18:len(df)]
 
+        print(df_a)
+        print("--------------------------------------")
+        print(df_b)
+        print('*************************')
+        # TODO: Fix the issue where the first table have dynamic size
+        # The same ways it was done in the summary tab
+
         for index, row in df_a.iterrows():
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
             self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
@@ -317,12 +324,12 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_summary.write(row, col_b + 1, self.pair.summary_to, format_)
             row += 1
 
-            if self.equal_summary_from:
+            if not self.equal_summary_from:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From', self.summary_from, self.pair.summary_from, tab=TAB_SUMMARY))
-            if self.equal_summary_to:
+                    self.full_path, 'From does not match', '', self.summary_from, self.pair.summary_from, tab=TAB_SUMMARY))
+            if not self.equal_summary_to:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To', self.summary_to, self.pair.summary_to, tab=TAB_SUMMARY))
+                    self.full_path, 'To does not match', '', self.summary_to, self.pair.summary_to, tab=TAB_SUMMARY))
             row += 1
 
         sections = [self.summary_summary, self.summary_ptbff, self.summary_mobbtb, self.summary_ptrff, self.summary_mobrtb]
@@ -333,6 +340,8 @@ class BranchTaxInvoice(TaxInvoice):
                 worksheet_summary.write(row, col_a + index, item, fmt_table_header)
                 worksheet_summary.write(row, col_b + index, item, fmt_table_header)
             row += 1
+
+            ignore_last_two = sec_index > 0
 
             for key in section.keys():
                 self_row = section[key]
@@ -345,16 +354,16 @@ class BranchTaxInvoice(TaxInvoice):
                     pair_row.margin = margin
                     pair_row.pair = self_row
                     self.summary_errors += RCTIDataRow.write_row(
-                        self.full_path, worksheet_summary, pair_row, row, fmt_error, 'right')
+                        self.full_path, worksheet_summary, pair_row, row, fmt_error, TAB_SUMMARY, 'right', ignore_last_two)
 
                 self.summary_errors += RCTIDataRow.write_row(
-                    self.pair.full_path, worksheet_summary, self_row, row, fmt_error)
+                    self.pair.full_path, worksheet_summary, self_row, row, fmt_error, TAB_SUMMARY, ignore_last_two=ignore_last_two)
                 row += 1
 
             alone_keys_infynity = set(sections_pairs[sec_index].keys() - set(section.keys()))
             for key in alone_keys_infynity:
                 self.summary_errors += RCTIDataRow.write_row(
-                    self.pair.full_path, worksheet_summary, sections_pairs[sec_index][key], row, fmt_error, 'right')
+                    self.pair.full_path, worksheet_summary, sections_pairs[sec_index][key], row, fmt_error, TAB_SUMMARY, 'right', ignore_last_two)
                 row += 1
 
             use_header = HEADER_SUMMARY_SHORTENED
@@ -403,16 +412,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if self.equal_rcti_from:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
+                    self.full_path, 'From does not match', '', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
             if self.equal_rcti_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From ABN', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
+                    self.full_path, 'From ABN does not match', '', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
             if self.equal_rcti_to:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
+                    self.full_path, 'To does not match', '', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
             if self.equal_rcti_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To ABN', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
+                    self.full_path, 'To ABN does not match', '', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
 
         row += 2
 
@@ -432,16 +441,16 @@ class BranchTaxInvoice(TaxInvoice):
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += RCTIDataRow.write_row(
-                    self.full_path, worksheet_rcti, pair_row, row, fmt_error, 'right')
+                    self.full_path, worksheet_rcti, pair_row, row, fmt_error, TAB_RCTI, 'right')
 
             self.summary_errors += RCTIDataRow.write_row(
-                self.pair.full_path, worksheet_rcti, self_row, row, fmt_error)
+                self.pair.full_path, worksheet_rcti, self_row, row, fmt_error, TAB_RCTI)
             row += 1
 
         alone_keys_infynity = set(self.pair.rcti_data_rows.keys() - set(self.rcti_data_rows.keys()))
         for key in alone_keys_infynity:
             self.summary_errors += RCTIDataRow.write_row(
-                self.pair.full_path, worksheet_rcti, self.pair.rcti_data_rows[key], row, fmt_error, 'right')
+                self.pair.full_path, worksheet_rcti, self.pair.rcti_data_rows[key], row, fmt_error, TAB_RCTI, 'right')
             row += 1
         # endregion
 
@@ -487,16 +496,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if self.equal_tax_invoice_from:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
+                    self.full_path, 'From does not match', '', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'From ABN', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
+                    self.full_path, 'From ABN does not match', '', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_to:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
+                    self.full_path, 'To does not match', '', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
             if self.equal_tax_invoice_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, 'To ABN', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
+                    self.full_path, 'To ABN does not match', '', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
 
         row += 2
 
@@ -677,6 +686,8 @@ class BranchTaxInvoice(TaxInvoice):
         workbook.close()
         return self.summary_errors
 
+    # region Properties
+
     @property
     def equal_tax_invoice_from(self):
         if self.pair is None:
@@ -736,6 +747,8 @@ class BranchTaxInvoice(TaxInvoice):
         if self.pair is None:
             return False
         return self.summary_to == self.pair.summary_to
+
+    # endregion
 
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
@@ -1253,7 +1266,7 @@ class TaxInvoiceDataRow(InvoiceRow):
         InvoiceRow.__init__(self)
 
         self.description = ' '.join(description.strip().split())
-        self.amount = float(amount) if amount != '' else 0
+        self.amount = float(amount) if amount not in ('', ' ') else 0
         self.gst = float(gst) if gst != '' else 0
         self.total = float(total) if total != '' else 0
         self.comments = comments.lower()
@@ -1476,7 +1489,7 @@ class RCTIDataRow(InvoiceRow):
         return sha.hexdigest()
 
     @staticmethod
-    def write_row(filename, worksheet, element, row, fmt_error, side='left'):
+    def write_row(filename, worksheet, element, row, fmt_error, tab, side='left', ignore_last_two=False):
         col = 0
         if side == 'right':
             col = 5
@@ -1484,25 +1497,27 @@ class RCTIDataRow(InvoiceRow):
         worksheet.write(row, col, element.description)
         format_ = fmt_error if not element.equal_amount else None
         worksheet.write(row, col + 1, element.amount, format_)
-        format_ = fmt_error if not element.equal_gst else None
-        worksheet.write(row, col + 2, element.gst, format_)
-        format_ = fmt_error if not element.equal_total else None
-        worksheet.write(row, col + 3, element.total, format_)
+
+        if not ignore_last_two:
+            format_ = fmt_error if not element.equal_gst else None
+            worksheet.write(row, col + 2, element.gst, format_)
+            format_ = fmt_error if not element.equal_total else None
+            worksheet.write(row, col + 3, element.total, format_)
 
         errors = []
         line = element.document_row
         if element.pair is not None:
             if not element.equal_amount:
                 errors.append(new_error(
-                    filename, 'Amount does not match', line, element.amount, element.pair.amount, tab=TAB_RCTI))
+                    filename, 'Amount does not match', line, element.amount, element.pair.amount, tab=tab))
             if not element.equal_gst:
                 errors.append(new_error(
-                    filename, 'GST does not match', line, element.gst, element.pair.gst, tab=TAB_RCTI))
+                    filename, 'GST does not match', line, element.gst, element.pair.gst, tab=tab))
             if not element.equal_total:
                 errors.append(new_error(
-                    filename, 'Total does not match', line, element.total, element.pair.total, tab=TAB_RCTI))
+                    filename, 'Total does not match', line, element.total, element.pair.total, tab=tab))
         else:
-            errors.append(new_error(filename, 'No corresponding row in commission file', line, tab=TAB_RCTI))
+            errors.append(new_error(filename, 'No corresponding row in commission file', line, tab=tab))
 
         return errors
 

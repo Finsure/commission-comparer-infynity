@@ -166,6 +166,8 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
     fmt_title = workbook.add_format({'font_size': 20, 'bold': True})
     fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
     worksheet.merge_range('A1:I1', 'Commission Branch RCTI Summary', fmt_title)
+    row += 1
+    worksheet.write(row, col, 'Number of issues: ' + str(len(summary_errors)))
     row += 2
     worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header)
     workbook.close()
