@@ -170,7 +170,7 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
     worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header)
     workbook.close()
 
-    print(OKGREEN + ' OK' + ENDC)
+    print(OKGREEN + 'OK' + ENDC)
 
 
 # Add subcommands to the CLI
@@ -204,7 +204,7 @@ def new_summary_row():
 if __name__ == '__main__':
     # rcti()
     rcti_compare_branch(
-        0.0,
+        0.5,
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
 
