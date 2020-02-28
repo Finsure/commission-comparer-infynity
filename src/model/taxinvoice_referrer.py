@@ -188,7 +188,7 @@ class ReferrerTaxInvoice(TaxInvoice):
                 print('This run is trying to remove a row record that is not in the keys list anymore')
                 print('This happens when the key is used to compare (not the full_key, therefor there may be a key clush) and the wrong record is removed from the list')
                 print('Check this file manually: ' + YELLOW + self.full_path)
-                print(RED + 'Contact the development team at petros.schilling@gmail.com if there is any questions')
+                print(RED + 'Contact the development team at petros.schilling@loankit.com if there is any questions')
                 print(ENDC)
                 # NOTE: Use this tutorial to learn about word similarity and fix the issue:
                 # https://towardsdatascience.com/calculating-string-similarity-in-python-276e18a7d33a
@@ -229,7 +229,7 @@ class ReferrerTaxInvoice(TaxInvoice):
             if part == "Referrer":
                 del filename_parts[index - 1]  # Remove year-month stamp
 
-        filename_forkey = '_'.join(filename_parts)
+        filename_forkey = ''.join(filename_parts)
         sha.update(filename_forkey.encode(ENCODING))
         return sha.hexdigest()
 

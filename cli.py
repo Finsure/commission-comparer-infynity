@@ -13,10 +13,8 @@ from src.utils import merge_lists, OKGREEN, ENDC
 
 
 # Constants
-AMOUNT_OF_FILES = 'Amount of Files'
 INFYNITY = 'Infynity'
 LOANKIT = 'Loankit'
-SUMMARY = 'Summary'
 
 DESC_LOOSE = 'Margin of error for a comparison between two numbers to be considered correct.'
 
@@ -26,10 +24,10 @@ def rcti():
     pass
 
 
-@click.command('compare_referrer')
-@click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
-@click.argument('loankit_dir', required=True, type=click.Path(exists=True))
-@click.argument('infynity_dir', required=True, type=click.Path(exists=True))
+# @click.command('compare_referrer')
+# @click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
+# @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
+# @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     """ A CLI for comparing the commission files between two directories """
 
@@ -73,11 +71,11 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     print("Finished.")
 
 
-@click.command('compare_broker')
-@click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
-@click.argument('loankit_dir', required=True, type=click.Path(exists=True))
-@click.argument('infynity_dir', required=True, type=click.Path(exists=True))
-def rcit_compare_broker(loose, loankit_dir, infynity_dir):
+# @click.command('compare_broker')
+# @click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
+# @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
+# @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
+def rcti_compare_broker(loose, loankit_dir, infynity_dir):
     print("Starting broker files comparison...")
     print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
 
@@ -176,8 +174,8 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
 
 
 # Add subcommands to the CLI
-rcti.add_command(rcti_compare_referrer)
-rcti.add_command(rcit_compare_broker)
+# rcti.add_command(rcti_compare_referrer)
+# rcti.add_command(rcti_compare_broker)
 # rcti.add_command(rcti_compare_branch)
 
 
@@ -190,25 +188,20 @@ def list_files(dir_: str) -> list:
     return files
 
 
-def new_summary_row():
-    return {
-        'Transaction Line Number': "",
-        'Key': "",
-        'Infynity Amount Paid': "",
-        'Loankit Amount Paid': "",
-        'Infynity GST Paid': "",
-        'Loankit GST Paid': "",
-        'Infynity Total Amount Paid': "",
-        'Loankit Total Amount Paid': ""
-    }
-
-
 if __name__ == '__main__':
     # rcti()
-    rcti_compare_branch(
+    # rcti_compare_branch(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    rcti_compare_broker(
         0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    # rcti_compare_referrer(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
 
 # SIMULATE REFERRER
 # python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/"
