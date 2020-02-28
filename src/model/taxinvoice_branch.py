@@ -161,15 +161,25 @@ class BranchTaxInvoice(TaxInvoice):
         self.tax_invoice_to = df.iloc[2][1].strip()
         self.tax_invoice_to_abn = df.iloc[3][1].strip()
 
-        df_a = df[5:17]
-        df_b = df[18:len(df)]
+        section1_end = None
+        section2_start = None
+        section2_end = None
 
-        print(df_a)
-        print("--------------------------------------")
-        print(df_b)
-        print('*************************')
-        # TODO: Fix the issue where the first table have dynamic size
-        # The same ways it was done in the summary tab
+        current_section = 1
+        index = 0
+        for i, row in df.iterrows():
+            if row[0].lower() == 'finsure software fee breakdown':
+                current_section = 2
+                section2_start = index + 1
+            elif row[0].lower() == 'total':
+                if current_section == 1:
+                    section1_end = index + 1
+                if current_section == 2:
+                    section2_end = index + 1
+            index += 1
+
+        df_a = df[5:section1_end]
+        df_b = df[section2_start:section2_end]
 
         for index, row in df_a.iterrows():
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
