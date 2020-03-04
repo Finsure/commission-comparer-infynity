@@ -7,7 +7,7 @@ from src.model.taxinvoice import (create_detailed_dir, create_summary_dir, new_e
                                   get_header_format, get_title_format, PID, OUTPUT_DIR_SUMMARY_PID)
 from src.model.taxinvoice_referrer import (create_summary_referrer, create_detailed_referrer,
                                            read_files_referrer)
-from src.model.taxinvoice_broker_new import read_files_broker
+from src.model.taxinvoice_broker import read_files_broker
 from src.model.taxinvoice_branch import read_files_branch
 from src.utils import merge_lists, OKGREEN, ENDC
 
