@@ -6,7 +6,7 @@ import pandas
 import xlsxwriter
 from xlrd.biffh import XLRDError
 
-from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH_PID, new_error,
+from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH, new_error,
                                   get_header_format, get_error_format)
 
 # HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Settled Loan',
@@ -775,7 +775,7 @@ class BranchTaxInvoice(TaxInvoice):
 
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
-        return xlsxwriter.Workbook(OUTPUT_DIR_BRANCH_PID + 'DETAILED_' + self.filename + suffix)
+        return xlsxwriter.Workbook(OUTPUT_DIR_BRANCH + 'DETAILED_' + self.filename + suffix)
 
     def __generate_key(self):
         sha = hashlib.sha256()

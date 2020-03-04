@@ -5,7 +5,7 @@ import hashlib
 import pandas
 import xlsxwriter
 
-from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER_PID, new_error,
+from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER, new_error,
                                   get_header_format, get_error_format)
 
 HEADER_BROKER = ['Commission Type', 'Client', 'Commission Ref ID', 'Bank', 'Loan Balance',
@@ -108,7 +108,7 @@ class BrokerTaxInvoice(TaxInvoice):
 
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
-        return xlsxwriter.Workbook(OUTPUT_DIR_BROKER_PID + 'DETAILED_' + self.filename + suffix)
+        return xlsxwriter.Workbook(OUTPUT_DIR_BROKER + 'DETAILED_' + self.filename + suffix)
 
     def __generate_key(self):
         sha = hashlib.sha256()
@@ -203,12 +203,6 @@ class BrokerInvoiceRow(InvoiceRow):
         if self.pair is None:
             return False
         return self.comments == self.pair.comments
-
-    @property
-    def equal_row_number(self):
-        if self.pair is None:
-            return False
-        return self.row_number == self.pair.row_number
     # endregion
 
     def __generate_key(self):

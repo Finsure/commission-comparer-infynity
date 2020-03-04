@@ -8,18 +8,11 @@ PID = str(calendar.timegm(time.gmtime()))
 
 # OUTPUT_DIR = '/var/www/mystro.com/data/rcti_comparison/'
 OUTPUT_DIR = './Output/'
-
-OUTPUT_DIR_REFERRER = OUTPUT_DIR + 'referrer_rctis/'
-OUTPUT_DIR_REFERRER_PID = OUTPUT_DIR_REFERRER + PID + '/'
-
-OUTPUT_DIR_BROKER = OUTPUT_DIR + 'broker_rctis/'
-OUTPUT_DIR_BROKER_PID = OUTPUT_DIR_BROKER + PID + '/'
-
-OUTPUT_DIR_BRANCH = OUTPUT_DIR + 'branch_rctis/'
-OUTPUT_DIR_BRANCH_PID = OUTPUT_DIR_BRANCH + PID + '/'
-
-OUTPUT_DIR_SUMMARY = OUTPUT_DIR + 'executive_summary/'
-OUTPUT_DIR_SUMMARY_PID = OUTPUT_DIR_SUMMARY + PID + '/'
+OUTPUT_DIR_PID = OUTPUT_DIR + PID + '/'
+OUTPUT_DIR_REFERRER = OUTPUT_DIR_PID + 'referrer_rctis/'
+OUTPUT_DIR_BROKER = OUTPUT_DIR_PID + 'broker_rctis/'
+OUTPUT_DIR_BRANCH = OUTPUT_DIR_PID + 'branch_rctis/'
+OUTPUT_DIR_SUMMARY = OUTPUT_DIR_PID + 'executive_summary/'
 
 
 class TaxInvoice:
@@ -76,38 +69,24 @@ class InvoiceRow:
         return self.__dict__
 
 
-def create_summary_dir():
+def create_dirs():
     if not os.path.exists(OUTPUT_DIR):
         os.mkdir(OUTPUT_DIR)
 
-    if not os.path.exists(OUTPUT_DIR_SUMMARY):
-        os.mkdir(OUTPUT_DIR_SUMMARY)
-
-    if not os.path.exists(OUTPUT_DIR_SUMMARY_PID):
-        os.mkdir(OUTPUT_DIR_SUMMARY_PID)
-
-
-def create_detailed_dir():
-    if not os.path.exists(OUTPUT_DIR):
-        os.mkdir(OUTPUT_DIR)
+    if not os.path.exists(OUTPUT_DIR_PID):
+        os.mkdir(OUTPUT_DIR_PID)
 
     if not os.path.exists(OUTPUT_DIR_REFERRER):
         os.mkdir(OUTPUT_DIR_REFERRER)
 
-    if not os.path.exists(OUTPUT_DIR_REFERRER_PID):
-        os.mkdir(OUTPUT_DIR_REFERRER_PID)
-
     if not os.path.exists(OUTPUT_DIR_BROKER):
         os.mkdir(OUTPUT_DIR_BROKER)
-
-    if not os.path.exists(OUTPUT_DIR_BROKER_PID):
-        os.mkdir(OUTPUT_DIR_BROKER_PID)
 
     if not os.path.exists(OUTPUT_DIR_BRANCH):
         os.mkdir(OUTPUT_DIR_BRANCH)
 
-    if not os.path.exists(OUTPUT_DIR_BRANCH_PID):
-        os.mkdir(OUTPUT_DIR_BRANCH_PID)
+    if not os.path.exists(OUTPUT_DIR_SUMMARY):
+        os.mkdir(OUTPUT_DIR_SUMMARY)
 
 
 def new_error(file_a, file_b, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
