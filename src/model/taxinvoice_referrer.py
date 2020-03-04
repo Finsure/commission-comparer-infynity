@@ -388,7 +388,7 @@ def result_row_referrer():
 
 
 # This function is ugly as shit. We must figure out a better design to simplify things.
-def create_summary_referrer(results: list):
+def create_summary_referrer(results: list, filepath_a, filepath_b):
     workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY_PID + 'referrer_rcti_summary.xlsx')
     worksheet = workbook.add_worksheet('Summary')
 
@@ -483,7 +483,7 @@ def create_summary_referrer(results: list):
                                       values_list.get(5, ''))
                     list_errors.append(error)
 
-    worksheet = write_errors(list_errors, worksheet, row, col, fmt_table_header)
+    worksheet = write_errors(list_errors, worksheet, row, col, fmt_table_header, filepath_a, filepath_b)
     workbook.close()
 
 

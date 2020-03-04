@@ -110,10 +110,11 @@ def create_detailed_dir():
         os.mkdir(OUTPUT_DIR_BRANCH_PID)
 
 
-def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
+def new_error(file_a, file_b, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
               third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b='', tab=''):
     return {
-        'file': file,
+        'file_a': file_a,
+        'file_b': file_b,
         'tab': tab,
         'msg': msg,
         'line': line,
@@ -130,40 +131,42 @@ def new_error(file, msg, line='', first_a='', first_b='', second_a='', second_b=
     }
 
 
-def write_errors(errors: list, worksheet, row, col, header_fmt):
+def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, filepath_b):
     # Write summary header
-    worksheet.write(row, col, 'File', header_fmt)
-    worksheet.write(row, col + 1, 'Message', header_fmt)
-    worksheet.write(row, col + 2, 'Tab', header_fmt)
-    worksheet.write(row, col + 3, 'Line', header_fmt)
-    worksheet.write(row, col + 4, 'Loankit A', header_fmt)
-    worksheet.write(row, col + 5, 'Infynity A', header_fmt)
-    worksheet.write(row, col + 6, 'Loankit B', header_fmt)
-    worksheet.write(row, col + 7, 'Infynity B', header_fmt)
-    worksheet.write(row, col + 8, 'Loankit C', header_fmt)
-    worksheet.write(row, col + 9, 'Infynity C', header_fmt)
-    worksheet.write(row, col + 10, 'Loankit D', header_fmt)
-    worksheet.write(row, col + 11, 'Infynity D', header_fmt)
-    worksheet.write(row, col + 12, 'Loankit E', header_fmt)
-    worksheet.write(row, col + 13, 'Infynity E', header_fmt)
+    worksheet.write(row, col, 'File Path A: ' + filepath_a, header_fmt)
+    worksheet.write(row, col + 1, 'File Path B: ' + filepath_b, header_fmt)
+    worksheet.write(row, col + 2, 'Message', header_fmt)
+    worksheet.write(row, col + 3, 'Tab', header_fmt)
+    worksheet.write(row, col + 4, 'Line', header_fmt)
+    worksheet.write(row, col + 5, 'DEV A', header_fmt)
+    worksheet.write(row, col + 6, 'Finsure A', header_fmt)
+    worksheet.write(row, col + 7, 'DEV B', header_fmt)
+    worksheet.write(row, col + 8, 'Finsure B', header_fmt)
+    worksheet.write(row, col + 9, 'DEV C', header_fmt)
+    worksheet.write(row, col + 10, 'Finsure C', header_fmt)
+    worksheet.write(row, col + 11, 'DEV D', header_fmt)
+    worksheet.write(row, col + 12, 'Finsure D', header_fmt)
+    worksheet.write(row, col + 13, 'DEV E', header_fmt)
+    worksheet.write(row, col + 14, 'Finsure E', header_fmt)
     row += 1
 
     # Write errors
     for error in errors:
-        worksheet.write(row, col, error['file'])
-        worksheet.write(row, col + 1, error['msg'])
-        worksheet.write(row, col + 2, error['tab'])
-        worksheet.write(row, col + 3, error['line'])
-        worksheet.write(row, col + 4, error['first_a'])
-        worksheet.write(row, col + 5, error['first_b'])
-        worksheet.write(row, col + 6, error['second_a'])
-        worksheet.write(row, col + 7, error['second_b'])
-        worksheet.write(row, col + 8, error['third_a'])
-        worksheet.write(row, col + 9, error['third_b'])
-        worksheet.write(row, col + 10, error['fourth_a'])
-        worksheet.write(row, col + 11, error['fourth_b'])
-        worksheet.write(row, col + 12, error['fifth_a'])
-        worksheet.write(row, col + 13, error['fifth_b'])
+        worksheet.write(row, col, error['file_a'])
+        worksheet.write(row, col + 1, error['file_b'])
+        worksheet.write(row, col + 2, error['msg'])
+        worksheet.write(row, col + 3, error['tab'])
+        worksheet.write(row, col + 4, error['line'])
+        worksheet.write(row, col + 5, error['first_a'])
+        worksheet.write(row, col + 6, error['first_b'])
+        worksheet.write(row, col + 7, error['second_a'])
+        worksheet.write(row, col + 8, error['second_b'])
+        worksheet.write(row, col + 9, error['third_a'])
+        worksheet.write(row, col + 10, error['third_b'])
+        worksheet.write(row, col + 11, error['fourth_a'])
+        worksheet.write(row, col + 12, error['fourth_b'])
+        worksheet.write(row, col + 13, error['fifth_a'])
+        worksheet.write(row, col + 14, error['fifth_b'])
         row += 1
 
     return worksheet

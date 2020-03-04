@@ -60,7 +60,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
     create_detailed_dir()
 
     print("Creating summary...", end='')
-    create_summary_referrer(results)
+    create_summary_referrer(results, loankit_dir, infynity_dir)
     print(OKGREEN + ' OK' + ENDC)
 
     print("Creating detailed reports...", end='')
@@ -90,7 +90,9 @@ def rcti_compare_broker(loose, loankit_dir, infynity_dir):
         invoices_infynity,
         loose,
         'broker_rcti_summary',
-        'Commission Broker RCTI Summary')
+        'Commission Broker RCTI Summary',
+        loankit_dir,
+        infynity_dir)
 
     print(OKGREEN + ' OK' + ENDC)
 
@@ -114,12 +116,14 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
         invoices_infynity,
         loose,
         'branch_rcti_summary',
-        'Commission Branch RCTI Summary')
+        'Commission Branch RCTI Summary',
+        loankit_dir,
+        infynity_dir)
 
     print(OKGREEN + 'OK' + ENDC)
 
 
-def run_comparison(files_a, files_b, margin, summary_filname, summary_title):
+def run_comparison(files_a, files_b, margin, summary_filname, summary_title, filepath_a, filepath_b):
     create_summary_dir()
     create_detailed_dir()
 
@@ -133,14 +137,14 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title):
         else:
             # Log in the summary files that don't have a match
             msg = 'No corresponding commission file found'
-            error = new_error(files_a[key].filename, msg)
+            error = new_error(files_a[key].filename, '', msg)
             summary_errors.append(error)
 
     # Find all Infynity files that don't have a match
     alone_keys_infynity = set(files_b.keys()) - set(files_a.keys())
     for key in alone_keys_infynity:
         msg = 'No corresponding commission file found'
-        error = new_error(files_b[key].filename, msg)
+        error = new_error('', files_b[key].filename, msg)
         summary_errors.append(error)
 
     for key in files_a.keys():
@@ -158,7 +162,7 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title):
     col = 0
     worksheet.write(row, col, 'Number of issues: ' + str(len(summary_errors)))
     row += 2
-    worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header)
+    worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header, filepath_a, filepath_b)
     workbook.close()
 
 
@@ -183,14 +187,14 @@ if __name__ == '__main__':
     #     0.0,
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    # rcti_compare_broker(
-    #     0.0,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    rcti_compare_branch(
+    rcti_compare_broker(
         0.0,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    # rcti_compare_branch(
+    #     0.0,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
 
 # SIMULATE REFERRER
 # python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/"
