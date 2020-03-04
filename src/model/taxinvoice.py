@@ -180,3 +180,7 @@ def get_header_format(workbook):
 
 def get_title_format(workbook):
     return workbook.add_format({'font_size': 20, 'bold': True})
+
+
+def get_error_format(workbook):
+    return workbook.add_format({'font_color': 'red'})

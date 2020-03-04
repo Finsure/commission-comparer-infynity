@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup
 import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_SUMMARY_PID,
-                                  OUTPUT_DIR_REFERRER_PID, new_error, write_errors, worksheet_write)
+                                  OUTPUT_DIR_REFERRER_PID, new_error, write_errors, worksheet_write,
+                                  get_header_format, get_title_format, get_error_format)
 from src.utils import merge_lists, safelist, RED, YELLOW, ENDC
 
 
@@ -394,9 +395,8 @@ def create_summary_referrer(results: list):
     row = 0
     col = 0
 
-    fmt_title = workbook.add_format({'font_size': 20, 'bold': True})
-    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white',
-                                            'bg_color': 'black'})
+    fmt_title = get_title_format(workbook)
+    fmt_table_header = get_header_format(workbook)
 
     worksheet.merge_range('A1:I1', 'Commission Referrer RCTI Summary', fmt_title)
     row += 2
@@ -507,9 +507,9 @@ def create_detailed_referrer(result: dict):
     workbook = xlsxwriter.Workbook(OUTPUT_DIR_REFERRER_PID + 'DETAILED_' + result['filename'] + suffix)
     worksheet = workbook.add_worksheet('Detailed')
 
-    fmt_error = workbook.add_format({'font_color': 'red'})
+    fmt_error = get_error_format(workbook)
     fmt_bold = workbook.add_format({'bold': True})
-    fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
+    fmt_table_header = get_header_format(workbook)
 
     row = 0
     col_a = 0

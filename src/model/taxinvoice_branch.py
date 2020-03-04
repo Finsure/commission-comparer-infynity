@@ -6,7 +6,8 @@ import pandas
 import xlsxwriter
 from xlrd.biffh import XLRDError
 
-from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH_PID, new_error)
+from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH_PID, new_error,
+                                  get_header_format, get_error_format)
 
 # HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Settled Loan',
 #               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
@@ -318,8 +319,8 @@ class BranchTaxInvoice(TaxInvoice):
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
 
         workbook = self.create_workbook()
-        fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
-        fmt_error = workbook.add_format({'font_color': 'red'})
+        fmt_table_header = get_header_format(workbook)
+        fmt_error = get_error_format(workbook)
 
         # region Summary Section
         worksheet_summary = workbook.add_worksheet(TAB_SUMMARY)

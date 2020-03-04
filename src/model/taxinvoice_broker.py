@@ -5,7 +5,8 @@ import hashlib
 import pandas
 import xlsxwriter
 
-from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER_PID, new_error)
+from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER_PID, new_error,
+                                  get_header_format, get_error_format)
 
 HEADER_BROKER = ['Commission Type', 'Client', 'Commission Ref ID', 'Bank', 'Loan Balance',
                  'Amount Paid', 'GST Paid', 'Total Amount Paid', 'Comments']
@@ -64,8 +65,8 @@ class BrokerTaxInvoice(TaxInvoice):
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
 
         workbook = self.create_workbook()
-        fmt_table_header = workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
-        fmt_error = workbook.add_format({'font_color': 'red'})
+        fmt_table_header = get_header_format(workbook)
+        fmt_error = get_error_format(workbook)
 
         worksheet = workbook.add_worksheet()
         row = 0
