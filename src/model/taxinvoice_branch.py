@@ -704,7 +704,6 @@ class BranchTaxInvoice(TaxInvoice):
         return self.summary_errors
 
     # region Properties
-
     @property
     def equal_tax_invoice_from(self):
         if self.pair is None:
@@ -764,7 +763,6 @@ class BranchTaxInvoice(TaxInvoice):
         if self.pair is None:
             return False
         return self.summary_to == self.pair.summary_to
-
     # endregion
 
     def create_workbook(self):

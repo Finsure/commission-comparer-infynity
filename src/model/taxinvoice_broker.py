@@ -73,6 +73,8 @@ class BrokerTaxInvoice(TaxInvoice):
         col_a = 0
         col_b = 10
 
+        # TODO The broker and referrer DETAILE reports dont have a the top fields being added.
+
         for index, item in enumerate(HEADER_BROKER):
             worksheet.write(row, col_a + index, item, fmt_table_header)
             worksheet.write(row, col_b + index, item, fmt_table_header)

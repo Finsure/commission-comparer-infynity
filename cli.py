@@ -165,14 +165,14 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    # rcti_compare_referrer(
-    #     0.0,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    rcti_compare_broker(
+    rcti_compare_referrer(
         0.0,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    # rcti_compare_broker(
+    #     0.0,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
     # rcti_compare_branch(
     #     0.0,
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',

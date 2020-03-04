@@ -138,6 +138,66 @@ class ReferrerTaxInvoice(TaxInvoice):
         col_a = 0
         col_b = 8
 
+        format_ = fmt_error if not self.equal_from else None
+        worksheet.write(row, col_a, 'From')
+        worksheet.write(row, col_a + 1, self._from, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_from_abn else None
+        worksheet.write(row, col_a, 'From ABN')
+        worksheet.write(row, col_a + 1, self.from_abn, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_to else None
+        worksheet.write(row, col_a, 'To')
+        worksheet.write(row, col_a + 1, self.to, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_to_abn else None
+        worksheet.write(row, col_a, 'To ABN')
+        worksheet.write(row, col_a + 1, self.to_abn, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_bsb else None
+        worksheet.write(row, col_a, 'BSB')
+        worksheet.write(row, col_a + 1, self.bsb, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_account else None
+        worksheet.write(row, col_a, 'Account')
+        worksheet.write(row, col_a + 1, self.account, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_final_total else None
+        worksheet.write(row, col_a, 'Total')
+        worksheet.write(row, col_a + 1, self.final_total, format_)
+        row += 1
+
+        if self.pair is not None:
+            row = 0
+            format_ = fmt_error if not self.equal_from else None
+            worksheet.write(row, col_b, 'From')
+            worksheet.write(row, col_b + 1, self._from, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_from_abn else None
+            worksheet.write(row, col_b, 'From ABN')
+            worksheet.write(row, col_b + 1, self.from_abn, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_to else None
+            worksheet.write(row, col_b, 'To')
+            worksheet.write(row, col_b + 1, self.to, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_to_abn else None
+            worksheet.write(row, col_b, 'To ABN')
+            worksheet.write(row, col_b + 1, self.to_abn, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_bsb else None
+            worksheet.write(row, col_b, 'BSB')
+            worksheet.write(row, col_b + 1, self.bsb, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_account else None
+            worksheet.write(row, col_b, 'Account')
+            worksheet.write(row, col_b + 1, self.account, format_)
+            row += 1
+            format_ = fmt_error if not self.equal_final_total else None
+            worksheet.write(row, col_b, 'Total')
+            worksheet.write(row, col_b + 1, self.final_total, format_)
+            row += 1
+
         for index, item in enumerate(HEADER_REFERRER):
             worksheet.write(row, col_a + index, item, fmt_table_header)
             worksheet.write(row, col_b + index, item, fmt_table_header)
@@ -162,8 +222,8 @@ class ReferrerTaxInvoice(TaxInvoice):
             row += 1
 
         # Write unmatched records
-        alone_keys_infynity = set(self.pair.datarows.keys() - set(self.datarows.keys()))
-        for key in alone_keys_infynity:
+        keys_unmatched = set(self.pair.datarows.keys() - set(self.datarows.keys()))
+        for key in keys_unmatched:
             self.summary_errors += ReferrerInvoiceRow.write_row(
                 worksheet, self, self.pair.datarows[key], row, fmt_error, 'right')
             row += 1
@@ -183,6 +243,50 @@ class ReferrerTaxInvoice(TaxInvoice):
         else:
             self.datarows_count[row.key] = 1  # Increment row count for that key
             self.datarows[row.key] = row  # Add row to the list
+
+    # region Properties
+    @property
+    def equal_from(self):
+        if self.pair is None:
+            return False
+        return self._from == self.pair._from
+
+    @property
+    def equal_from_abn(self):
+        if self.pair is None:
+            return False
+        return self.from_abn == self.pair.from_abn
+
+    @property
+    def equal_to(self):
+        if self.pair is None:
+            return False
+        return self.to == self.pair.to
+
+    @property
+    def equal_to_abn(self):
+        if self.pair is None:
+            return False
+        return self.to_abn == self.pair.to_abn
+
+    @property
+    def equal_bsb(self):
+        if self.pair is None:
+            return False
+        return self.bsb == self.pair.bsb
+
+    @property
+    def equal_account(self):
+        if self.pair is None:
+            return False
+        return self.account == self.pair.account
+
+    @property
+    def equal_final_total(self):
+        if self.pair is None:
+            return False
+        return self.final_total == self.pair.final_total
+    # endregion
 
 
 class ReferrerInvoiceRow(InvoiceRow):
