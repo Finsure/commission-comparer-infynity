@@ -50,7 +50,7 @@ class BrokerTaxInvoice(TaxInvoice):
             invoice_row = BrokerInvoiceRow(
                 row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
                 row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
-                row['Total Amount Paid'], row['Comments'], index)
+                row['Total Amount Paid'], row['Comments'], index + 2)
             rows[invoice_row.key_full] = invoice_row
         return rows
 
@@ -132,8 +132,7 @@ class BrokerTaxInvoice(TaxInvoice):
 
         for key in result['results_rows'].keys():
             result['overall'] = result['overall'] and result['results_rows'][key]['overall']
-
-            return result
+        return result
 
     def __generate_key(self):
         sha = hashlib.sha256()
@@ -397,11 +396,11 @@ def create_summary_broker(results: list):
                     if not result_row['comments']:
                         values_list.append(result_row['comments_a'])
                         values_list.append(result_row['comments_b'])
-                    if not result['equal_bank']:
+                    if not result_row['bank']:
                         values_list.append(result_row['bank_a'])
                         values_list.append(result_row['bank_b'])
 
-                    msg = 'Values not match'
+                    msg = 'Values do not match'
                     error = new_error(file, msg, result_row['row_number'], values_list.get(0, ''),
                                       values_list.get(1, ''), values_list.get(2, ''),
                                       values_list.get(3, ''), values_list.get(4, ''),

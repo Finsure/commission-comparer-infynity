@@ -8,13 +8,19 @@ from xlrd.biffh import XLRDError
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH_PID, new_error)
 
-HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Settled Loan',
+# HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Settled Loan',
+#               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
+#               'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
+HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Settled Loan',
               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
               'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
 
 HEADER_UPFRONT = HEADER_VBI
 
-HEADER_TRAIL = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Loan Balance',
+# HEADER_TRAIL = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Loan Balance',
+#                 'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
+#                 'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
+HEADER_TRAIL = ['Broker', 'Lender', 'Client', 'Ref #', 'Loan Balance',
                 'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
                 'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
 
@@ -100,7 +106,7 @@ class BranchTaxInvoice(TaxInvoice):
                     row['Lender'],
                     row['Client'],
                     row['Ref #'],
-                    row['Referrer'],
+                    # row['Referrer'],
                     float(row['Settled Loan']),
                     row['Settlement Date'],
                     float(row['Commission']),
@@ -120,6 +126,7 @@ class BranchTaxInvoice(TaxInvoice):
             pass
 
     def parse_tab_trail_data(self):
+        print(self.filename)
         df = pandas.read_excel(self.full_path, sheet_name=TAB_TRAIL_DATA)
         df = df.dropna(how='all')
         df = df.replace(numpy.nan, '', regex=True)
@@ -133,7 +140,7 @@ class BranchTaxInvoice(TaxInvoice):
                 row['Lender'],
                 row['Client'],
                 row['Ref #'],
-                row['Referrer'],
+                # row['Referrer'],
                 float(row['Loan Balance']),
                 row['Settlement Date'],
                 float(row['Commission']),
@@ -168,13 +175,13 @@ class BranchTaxInvoice(TaxInvoice):
         current_section = 1
         index = 0
         for i, row in df.iterrows():
-            if row[0].lower() == 'finsure software fee breakdown':
+            if row[0].lower().endswith('software fee breakdown'):
                 current_section = 2
                 section2_start = index + 1
             elif row[0].lower() == 'total':
                 if current_section == 1:
                     section1_end = index + 1
-                if current_section == 2:
+                elif current_section == 2:
                     section2_end = index + 1
             index += 1
 
@@ -185,9 +192,10 @@ class BranchTaxInvoice(TaxInvoice):
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
             self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
 
-        for index, row in df_b.iterrows():
-            invoicerow = TaxInvoiceDataRow(' '.join(row[0].split()), row[1], row[2], row[3], row[4], index)
-            self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
+        if section2_start is not None:
+            for index, row in df_b.iterrows():
+                invoicerow = TaxInvoiceDataRow(' '.join(row[0].split()), row[1], row[2], row[3], row[4], index)
+                self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
 
     def parse_tab_rcti(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_RCTI)
@@ -208,6 +216,7 @@ class BranchTaxInvoice(TaxInvoice):
 
     def parse_tab_summary(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_SUMMARY)
+        df = df.replace('  ', '', regex=False)
         df = df.replace(' ', numpy.nan, regex=False)
         df = df.dropna(how='all')
         df = df.replace(numpy.nan, '', regex=True)
@@ -219,79 +228,83 @@ class BranchTaxInvoice(TaxInvoice):
         self.summary_to = df.iloc[2][1].strip()
 
         # Firstly we need to find out what are each section's start and end indexes
-        section1_start = None
-        section1_end = None
-        section2_start = None
-        section2_end = None
-        section3_start = None
-        section3_end = None
-        section4_start = None
-        section4_end = None
-        section5_start = None
-        section5_end = None
+        df1_start = None
+        df1_end = None
+        df2_start = None
+        df2_end = None
+        df3_start = None
+        df3_end = None
+        df4_start = None
+        df4_end = None
+        df5_start = None
+        df5_end = None
 
-        current_section = 0
+        current_df = 0
         index = 0
         for i, row in df.iterrows():
             if row[0].lower() == 'carried forward balance':
-                current_section = 1
-                section1_start = index
-            elif row[0].lower() == 'payment to brokers from finsure':
-                current_section = 2
-                section2_start = index + 1
-            elif row[0].lower() == 'payment to referrers from finsure':
-                current_section = 3
-                section3_start = index + 1
+                current_df = 1
+                df1_start = index
+            elif row[0].lower().startswith('payment to brokers from'):
+                current_df = 2
+                df2_start = index + 1
+            elif row[0].lower().startswith('payment to referrers from'):
+                current_df = 3
+                df3_start = index + 1
             elif row[0].lower() == 'money owed by brokers to branch':
-                current_section = 4
-                section4_start = index + 1
+                current_df = 4
+                df4_start = index + 1
             elif row[0].lower() == 'money owed by referrers to branch':
-                current_section = 5
-                section5_start = index + 1
+                current_df = 5
+                df5_start = index + 1
 
             elif row[0].lower() == '# of admin ids':
-                section1_end = index + 1
+                df1_end = index + 1
 
             elif row[0].lower() == 'total':
-                if current_section == 2:
-                    section2_end = index + 1
-                elif current_section == 3:
-                    section3_end = index + 1
-                elif current_section == 4:
-                    section4_end = index + 1
-                elif current_section == 5:
-                    section5_end = index + 1
+                if current_df == 2:
+                    df2_end = index + 1
+                elif current_df == 3:
+                    df3_end = index + 1
+                elif current_df == 4:
+                    df4_end = index + 1
+                elif current_df == 5:
+                    df5_end = index + 1
 
             index += 1
 
-        # Now we have each section's dataframe
-        section1_df = df[section1_start:section1_end]
-        section2_df = df[section2_start:section2_end]
-        section3_df = df[section3_start:section3_end]
-        section4_df = df[section4_start:section4_end]
-        section5_df = df[section5_start:section5_end]
+        # Now we have each df's dataframe
+        df1 = df[df1_start:df1_end]
+        de2 = df[df2_start:df2_end]
+        df3 = df[df3_start:df3_end]
+        df4 = df[df4_start:df4_end]
+        df5 = df[df5_start:df5_end]
 
         # Iterate through each section and create the rows.
         # In this case we can use the RCTIDataRow bc the data matches it HURRAY!!!
-        for index, row in section1_df.iterrows():
+        for index, row in df1.iterrows():
             summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
             self.summary_summary[summaryrow.key] = summaryrow
 
-        for index, row in section2_df.iterrows():
-            summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.summary_ptbff[summaryrow.key] = summaryrow
+        if df2_start is not None:
+            for index, row in de2.iterrows():
+                summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
+                self.summary_ptbff[summaryrow.key] = summaryrow
 
-        for index, row in section3_df.iterrows():
-            summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.summary_mobbtb[summaryrow.key] = summaryrow
+        if df3_start is not None:
+            for index, row in df3.iterrows():
+                summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
+                self.summary_mobbtb[summaryrow.key] = summaryrow
 
-        for index, row in section4_df.iterrows():
-            summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.summary_ptrff[summaryrow.key] = summaryrow
+        if df4_start is not None:
+            for index, row in df4.iterrows():
+                summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
+                self.summary_ptrff[summaryrow.key] = summaryrow
 
-        for index, row in section5_df.iterrows():
-            summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.summary_mobrtb[summaryrow.key] = summaryrow
+        if df5_start is not None:
+            for index, row in df5.iterrows():
+                summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
+                self.summary_mobrtb[summaryrow.key] = summaryrow
 
     # OH GOD WHY?
     def process_comparison(self, margin=0.000001):
@@ -777,7 +790,7 @@ class BranchTaxInvoice(TaxInvoice):
 
 class VBIDataRow(InvoiceRow):
 
-    def __init__(self, broker, lender, client, ref_no, referrer, settled_loan, settlement_date,
+    def __init__(self, broker, lender, client, ref_no, settled_loan, settlement_date,
                  commission, gst, commission_split, fees_gst, remitted, paid_to_broker,
                  paid_to_referrer, retained, document_row=None):
         InvoiceRow.__init__(self)
@@ -786,7 +799,7 @@ class VBIDataRow(InvoiceRow):
         self.lender = lender.strip()
         self.client = client.strip()
         self.ref_no = str(ref_no).strip().split('.')[0]
-        self.referrer = referrer.strip()
+        self.referrer = ''
         self.settled_loan = settled_loan
         self.settlement_date = settlement_date
         self.commission = commission
@@ -930,7 +943,7 @@ class VBIDataRow(InvoiceRow):
         sha.update(str(self.lender).encode(ENCODING))
         sha.update(str(self.client).encode(ENCODING))
         sha.update(str(self.ref_no).encode(ENCODING))
-        sha.update(str(self.referrer).encode(ENCODING))
+        # sha.update(str(self.referrer).encode(ENCODING))
         sha.update(str(self.settled_loan).encode(ENCODING))
         sha.update(str(self.settlement_date).encode(ENCODING))
         sha.update(str(self.commission).encode(ENCODING))
@@ -953,35 +966,35 @@ class VBIDataRow(InvoiceRow):
         worksheet.write(row, col + 1, element.lender)
         worksheet.write(row, col + 2, element.client)
         worksheet.write(row, col + 3, element.ref_no)
-        format_ = fmt_error if not element.equal_referrer else None
-        worksheet.write(row, col + 4, element.referrer, format_)
+        # format_ = fmt_error if not element.equal_referrer else None
+        # worksheet.write(row, col + 4, element.referrer, format_)
         format_ = fmt_error if not element.equal_settled_loan else None
-        worksheet.write(row, col + 5, element.settled_loan, format_)
+        worksheet.write(row, col + 4, element.settled_loan, format_)
         format_ = fmt_error if not element.equal_settlement_date else None
-        worksheet.write(row, col + 6, element.settlement_date, format_)
+        worksheet.write(row, col + 5, element.settlement_date, format_)
         format_ = fmt_error if not element.equal_commission else None
-        worksheet.write(row, col + 7, element.commission, format_)
+        worksheet.write(row, col + 6, element.commission, format_)
         format_ = fmt_error if not element.equal_gst else None
-        worksheet.write(row, col + 8, element.gst, format_)
+        worksheet.write(row, col + 7, element.gst, format_)
         format_ = fmt_error if not element.equal_commission_split else None
-        worksheet.write(row, col + 9, element.commission_split, format_)
+        worksheet.write(row, col + 8, element.commission_split, format_)
         format_ = fmt_error if not element.equal_fees_gst else None
-        worksheet.write(row, col + 10, element.fees_gst, format_)
+        worksheet.write(row, col + 9, element.fees_gst, format_)
         format_ = fmt_error if not element.equal_remitted else None
-        worksheet.write(row, col + 11, element.remitted, format_)
+        worksheet.write(row, col + 10, element.remitted, format_)
         format_ = fmt_error if not element.equal_paid_to_broker else None
-        worksheet.write(row, col + 12, element.paid_to_broker, format_)
+        worksheet.write(row, col + 11, element.paid_to_broker, format_)
         format_ = fmt_error if not element.equal_paid_to_referrer else None
-        worksheet.write(row, col + 13, element.paid_to_referrer, format_)
+        worksheet.write(row, col + 12, element.paid_to_referrer, format_)
         format_ = fmt_error if not element.equal_retained else None
-        worksheet.write(row, col + 14, element.retained, format_)
+        worksheet.write(row, col + 13, element.retained, format_)
 
         errors = []
         line = element.document_row
         if element.pair is not None:
-            if not element.equal_referrer:
-                errors.append(new_error(
-                    filename, 'Referrer does not match', line, element.referrer, element.pair.referrer, tab=tabname))
+            # if not element.equal_referrer:
+            #     errors.append(new_error(
+            #         filename, 'Referrer does not match', line, element.referrer, element.pair.referrer, tab=tabname))
             if not element.equal_settled_loan:
                 errors.append(new_error(
                     filename, 'Settled Loan does not match', line, element.settled_loan, element.pair.settled_loan, tab=tabname))
@@ -1020,7 +1033,7 @@ class VBIDataRow(InvoiceRow):
 
 class TrailDataRow(InvoiceRow):
 
-    def __init__(self, broker, lender, client, ref_no, referrer, loan_balance, settlement_date,
+    def __init__(self, broker, lender, client, ref_no, loan_balance, settlement_date,
                  commission, gst, commission_split, fees_gst, remitted, paid_to_broker,
                  paid_to_referrer, retained, document_row=None):
         InvoiceRow.__init__(self)
@@ -1029,7 +1042,7 @@ class TrailDataRow(InvoiceRow):
         self.lender = lender.strip()
         self.client = client.strip()
         self.ref_no = str(ref_no).strip()
-        self.referrer = referrer.strip()
+        self.referrer = ''
         self.loan_balance = loan_balance
         self.settlement_date = settlement_date
         self.commission = commission
@@ -1178,7 +1191,7 @@ class TrailDataRow(InvoiceRow):
         sha.update(str(self.lender).encode(ENCODING))
         sha.update(str(self.client).encode(ENCODING))
         sha.update(str(self.ref_no).encode(ENCODING))
-        sha.update(str(self.referrer).encode(ENCODING))
+        # sha.update(str(self.referrer).encode(ENCODING))
         sha.update(str(self.loan_balance).encode(ENCODING))
         sha.update(str(self.settlement_date).encode(ENCODING))
         sha.update(str(self.commission).encode(ENCODING))
@@ -1202,28 +1215,28 @@ class TrailDataRow(InvoiceRow):
         worksheet.write(row, col + 1, element.lender, format_)
         worksheet.write(row, col + 2, element.client)
         worksheet.write(row, col + 3, element.ref_no)
-        format_ = fmt_error if not element.equal_referrer else None
-        worksheet.write(row, col + 4, element.referrer, format_)
+        # format_ = fmt_error if not element.equal_referrer else None
+        # worksheet.write(row, col + 4, element.referrer, format_)
         format_ = fmt_error if not element.equal_loan_balance else None
-        worksheet.write(row, col + 5, element.loan_balance, format_)
+        worksheet.write(row, col + 4, element.loan_balance, format_)
         format_ = fmt_error if not element.equal_settlement_date else None
-        worksheet.write(row, col + 6, element.settlement_date, format_)
+        worksheet.write(row, col + 5, element.settlement_date, format_)
         format_ = fmt_error if not element.equal_commission else None
-        worksheet.write(row, col + 7, element.commission, format_)
+        worksheet.write(row, col + 6, element.commission, format_)
         format_ = fmt_error if not element.equal_gst else None
-        worksheet.write(row, col + 8, element.gst, format_)
+        worksheet.write(row, col + 7, element.gst, format_)
         format_ = fmt_error if not element.equal_commission_split else None
-        worksheet.write(row, col + 9, element.commission_split, format_)
+        worksheet.write(row, col + 8, element.commission_split, format_)
         format_ = fmt_error if not element.equal_fees_gst else None
-        worksheet.write(row, col + 10, element.fees_gst, format_)
+        worksheet.write(row, col + 9, element.fees_gst, format_)
         format_ = fmt_error if not element.equal_remitted else None
-        worksheet.write(row, col + 11, element.remitted, format_)
+        worksheet.write(row, col + 10, element.remitted, format_)
         format_ = fmt_error if not element.equal_paid_to_broker else None
-        worksheet.write(row, col + 12, element.paid_to_broker, format_)
+        worksheet.write(row, col + 11, element.paid_to_broker, format_)
         format_ = fmt_error if not element.equal_paid_to_referrer else None
-        worksheet.write(row, col + 13, element.paid_to_referrer, format_)
+        worksheet.write(row, col + 12, element.paid_to_referrer, format_)
         format_ = fmt_error if not element.equal_retained else None
-        worksheet.write(row, col + 14, element.retained, format_)
+        worksheet.write(row, col + 13, element.retained, format_)
 
         errors = []
         line = element.document_row
@@ -1231,9 +1244,9 @@ class TrailDataRow(InvoiceRow):
             if not element.equal_lender:
                 errors.append(new_error(
                     filename, 'Lender does not match', line, element.lender, element.pair.lender, tab=TAB_TRAIL_DATA))
-            if not element.equal_referrer:
-                errors.append(new_error(
-                    filename, 'Referrer does not match', line, element.referrer, element.pair.referrer, tab=TAB_TRAIL_DATA))
+            # if not element.equal_referrer:
+            #     errors.append(new_error(
+            #         filename, 'Referrer does not match', line, element.referrer, element.pair.referrer, tab=TAB_TRAIL_DATA))
             if not element.equal_loan_balance:
                 errors.append(new_error(
                     filename, 'Loan Balance does not match', line, element.loan_balance, element.pair.loan_balance, tab=TAB_TRAIL_DATA))
@@ -1413,9 +1426,9 @@ class RCTIDataRow(InvoiceRow):
         InvoiceRow.__init__(self)
 
         self.description = ' '.join(description.strip().split())
-        self.amount = float(amount) if amount != '' else 0
-        self.gst = float(gst) if gst != '' else 0
-        self.total = float(total) if total != '' else 0
+        self.amount = float(amount) if amount != '' and amount != ' ' else 0
+        self.gst = float(gst) if gst != '' and gst != ' ' else 0
+        self.total = float(total) if total != '' and gst != ' ' else 0
 
         self._pair = None
         self._margin = 0

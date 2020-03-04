@@ -66,6 +66,8 @@ class InvoiceRow:
             n1val = float(n1val)
             n2val = float(n2val)
         except ValueError:
+            if n1val == '' or n2val == '':
+                return n1val == n2val
             return False
 
         return abs(n1val - n2val) <= margin + 0.000001
@@ -170,3 +172,11 @@ def write_errors(errors: list, worksheet, row, col, header_fmt):
 def worksheet_write(worksheet, row, col, label, fmt_label, value, fmt_value):
     worksheet.write(row, col, label, fmt_label)
     worksheet.write(row, col + 1, value, fmt_value)
+
+
+def get_header_format(workbook):
+    return workbook.add_format({'bold': True, 'font_color': 'white', 'bg_color': 'black'})
+
+
+def get_title_format(workbook):
+    return workbook.add_format({'font_size': 20, 'bold': True})
