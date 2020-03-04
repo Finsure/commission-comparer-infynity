@@ -9,18 +9,12 @@ from xlrd.biffh import XLRDError
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH, new_error,
                                   get_header_format, get_error_format)
 
-# HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Settled Loan',
-#               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
-#               'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
 HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Settled Loan',
               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
               'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
 
 HEADER_UPFRONT = HEADER_VBI
 
-# HEADER_TRAIL = ['Broker', 'Lender', 'Client', 'Ref #', 'Referrer', 'Loan Balance',
-#                 'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
-#                 'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
 HEADER_TRAIL = ['Broker', 'Lender', 'Client', 'Ref #', 'Loan Balance',
                 'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
                 'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
@@ -433,16 +427,16 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_rcti.write(row, col_b, 'To ABN')
             worksheet_rcti.write(row, col_b + 1, self.pair.rcti_to_abn, format_)
 
-            if self.equal_rcti_from:
+            if not self.equal_rcti_from:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'From does not match', '', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
-            if self.equal_rcti_from_abn:
+            if not self.equal_rcti_from_abn:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'From ABN does not match', '', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
-            if self.equal_rcti_to:
+            if not self.equal_rcti_to:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'To does not match', '', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
-            if self.equal_rcti_to_abn:
+            if not self.equal_rcti_to_abn:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'To ABN does not match', '', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
 
@@ -517,16 +511,16 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_tax_invoice.write(row, col_b, 'To ABN')
             worksheet_tax_invoice.write(row, col_b + 1, self.pair.tax_invoice_to_abn, format_)
 
-            if self.equal_tax_invoice_from:
+            if not self.equal_tax_invoice_from:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'From does not match', '', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
-            if self.equal_tax_invoice_from_abn:
+            if not self.equal_tax_invoice_from_abn:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'From ABN does not match', '', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
-            if self.equal_tax_invoice_to:
+            if not self.equal_tax_invoice_to:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'To does not match', '', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
-            if self.equal_tax_invoice_to_abn:
+            if not self.equal_tax_invoice_to_abn:
                 self.summary_errors.append(new_error(
                     self.filename, self.pair.filename, 'To ABN does not match', '', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
 
@@ -813,7 +807,7 @@ class VBIDataRow(InvoiceRow):
 
         self._pair = None
         self._margin = 0
-        self._document_row = document_row
+        self._document_row = document_row + 2 if document_row is not None else document_row
 
         self._key = self.__generate_key()
         self._key_full = self.__generate_key_full()
@@ -1053,7 +1047,7 @@ class TrailDataRow(InvoiceRow):
 
         self._pair = None
         self._margin = 0
-        self._document_row = document_row
+        self._document_row = document_row + 2 if document_row is not None else document_row
 
         self._key = self.__generate_key()
         self._key_full = self.__generate_key_full()
@@ -1290,7 +1284,7 @@ class TaxInvoiceDataRow(InvoiceRow):
 
         self._pair = None
         self._margin = 0
-        self._document_row = document_row
+        self._document_row = document_row + 2 if document_row is not None else document_row
 
         self._key = self.__generate_key()
         self._key_full = self.__generate_key_full()
@@ -1426,7 +1420,7 @@ class RCTIDataRow(InvoiceRow):
 
         self._pair = None
         self._margin = 0
-        self._document_row = document_row
+        self._document_row = document_row + 2 if document_row is not None else document_row
 
         self._key = self.__generate_key()
         self._key_full = self.__generate_key_full()
@@ -1541,7 +1535,9 @@ class RCTIDataRow(InvoiceRow):
 
 def read_files_branch(dir_: str, files: list) -> dict:
     keys = {}
+    counter = 1
     for file in files:
+        print(f'Parsing {counter} of {len(files)} files from {dir_}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:
@@ -1550,4 +1546,6 @@ def read_files_branch(dir_: str, files: list) -> dict:
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
+        counter += 1
+    print()
     return keys

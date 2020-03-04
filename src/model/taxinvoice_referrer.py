@@ -17,6 +17,7 @@ class ReferrerTaxInvoice(TaxInvoice):
         self.filetext = self.get_file_text()
         self.pair = None
         self.datarows = {}
+        self.datarows_count = {}
         self.summary_errors = []
         self._key = self.__generate_key()
         self.parse()
@@ -36,7 +37,7 @@ class ReferrerTaxInvoice(TaxInvoice):
         self.bsb = self.parse_bsb(soup)
         self.account = self.parse_account(soup)
         self.final_total = self.parse_final_total(soup)
-        self.datarows = self.parse_rows(soup)
+        self.parse_rows(soup)
 
     def parse_from(self, soup: BeautifulSoup):
         parts_info = self._get_parts_info(soup)
@@ -82,19 +83,17 @@ class ReferrerTaxInvoice(TaxInvoice):
         header.extract()  # Remove header
         table_rows = soup.find_all('tr')
         row_number = 0
-        rows = {}
         for tr in table_rows:
             row_number += 1
             tds = tr.find_all('td')
             try:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, tds[2].text,
                                          tds[3].text, tds[4].text, tds[5].text, row_number)
-                rows[row.key_full] = row
+                self.__add_datarow(row)
             except IndexError:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, '',
                                          tds[2].text, tds[3].text, tds[4].text, row_number)
-                rows[row.key_full] = row
-        return rows
+                self.__add_datarow(row)
 
     def _get_parts_info(self, soup: BeautifulSoup):
         body = soup.find('body')
@@ -157,9 +156,9 @@ class ReferrerTaxInvoice(TaxInvoice):
                 pair_row.pair = self_row
                 self.summary_errors += ReferrerInvoiceRow.write_row(
                     worksheet, self, pair_row, row, fmt_error, 'right')
-
-            self.summary_errors += ReferrerInvoiceRow.write_row(
-                worksheet, self, self_row, row, fmt_error)
+            else:
+                self.summary_errors += ReferrerInvoiceRow.write_row(
+                    worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
@@ -175,6 +174,15 @@ class ReferrerTaxInvoice(TaxInvoice):
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
         return xlsxwriter.Workbook(OUTPUT_DIR_REFERRER + 'DETAILED_' + self.filename + suffix)
+
+    def __add_datarow(self, row):
+        if row.key in self.datarows.keys():  # If the row already exists
+            self.datarows_count[row.key] += 1  # Increment row count for that key
+            row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
+            self.datarows[row.key] = row  # Add row to the list
+        else:
+            self.datarows_count[row.key] = 1  # Increment row count for that key
+            self.datarows[row.key] = row  # Add row to the list
 
 
 class ReferrerInvoiceRow(InvoiceRow):
@@ -193,13 +201,17 @@ class ReferrerInvoiceRow(InvoiceRow):
 
         self.row_number = row_number
 
-        self._key = self.__generate_key()
+        self._key = self._generate_key()
         self._key_full = self.__generate_key_full()
 
     # region Properties
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -258,11 +270,12 @@ class ReferrerInvoiceRow(InvoiceRow):
         return self.total == self.pair.total
     # endregion Properties
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.commission_type.encode(ENCODING))
         sha.update(self.client.encode(ENCODING))
         sha.update(self.referrer.encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
     def __generate_key_full(self):
@@ -304,7 +317,7 @@ class ReferrerInvoiceRow(InvoiceRow):
 
             if not element.equal_gst_paid:
                 errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'GST Paid does not match', line, element.equal_gst_paid, element.pair.equal_gst_paid))
+                    invoice.filename, invoice.pair.filename, 'GST Paid does not match', line, element.gst_paid, element.pair.gst_paid))
 
             if not element.equal_total:
                 errors.append(new_error(

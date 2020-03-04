@@ -18,6 +18,7 @@ class BrokerTaxInvoice(TaxInvoice):
         TaxInvoice.__init__(self, directory, filename)
         self.pair = None
         self.datarows = {}
+        self.datarows_count = {}
         self.summary_errors = []
         self._key = self.__generate_key()
         self.parse()
@@ -43,21 +44,20 @@ class BrokerTaxInvoice(TaxInvoice):
         self.bsb = bsb
         self.account = account
 
-        self.datarows = self.parse_rows(dataframe)
+        self.parse_rows(dataframe)
 
     def parse_rows(self, dataframe):
         dataframe_rows = dataframe.iloc[8:len(dataframe.index) - 1]
         dataframe_rows = dataframe_rows.rename(columns=dataframe_rows.iloc[0]).drop(dataframe_rows.index[0])
         dataframe_rows = dataframe_rows.dropna(how='all')  # remove rows that don't have any value
 
-        rows = {}
         for index, row in dataframe_rows.iterrows():
             invoice_row = BrokerInvoiceRow(
                 row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
                 row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
                 row['Total Amount Paid'], row['Comments'], index + 2)
-            rows[invoice_row.key_full] = invoice_row
-        return rows
+            # rows[invoice_row.key_full] = invoice_row
+            self.__add_datarow(invoice_row)
 
     def process_comparison(self, margin=0.000001):
         if self.pair is None:
@@ -91,9 +91,9 @@ class BrokerTaxInvoice(TaxInvoice):
                 pair_row.pair = self_row
                 self.summary_errors += BrokerInvoiceRow.write_row(
                     worksheet, self, pair_row, row, fmt_error, 'right')
-
-            self.summary_errors += BrokerInvoiceRow.write_row(
-                worksheet, self, self_row, row, fmt_error)
+            else:
+                self.summary_errors += BrokerInvoiceRow.write_row(
+                    worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
@@ -120,6 +120,15 @@ class BrokerTaxInvoice(TaxInvoice):
         sha.update(filename_forkey.encode(ENCODING))
         return sha.hexdigest()
 
+    def __add_datarow(self, row):
+        if row.key in self.datarows.keys():  # If the row already exists
+            self.datarows_count[row.key] += 1  # Increment row count for that key
+            row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
+            self.datarows[row.key] = row  # Add row to the list
+        else:
+            self.datarows_count[row.key] = 1  # Increment row count for that key
+            self.datarows[row.key] = row  # Add row to the list
+
 
 class BrokerInvoiceRow(InvoiceRow):
 
@@ -140,13 +149,17 @@ class BrokerInvoiceRow(InvoiceRow):
         self.comments = str(comments)
         self.row_number = str(row_number)
 
-        self._key = self.__generate_key()
+        self._key = self._generate_key()
         self._key_full = self.__generate_key_full()
 
     # region Properties
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -205,11 +218,12 @@ class BrokerInvoiceRow(InvoiceRow):
         return self.comments == self.pair.comments
     # endregion
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.commission_type.encode(ENCODING))
         sha.update(self.client.encode(ENCODING))
         sha.update(self.reference_id.encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
     def __generate_key_full(self):

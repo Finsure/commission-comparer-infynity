@@ -47,31 +47,6 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         loankit_dir,
         infynity_dir)
 
-    # # A list with all keys generated in both dicts
-    # keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
-
-    # results = []
-
-    # for key in keys_all:
-    #     invoice_lkt = invoices[LOANKIT].get(key, None)
-    #     invoice_inf = invoices[INFYNITY].get(key, None)
-
-    #     # Check if its possible to do a comparison
-    #     if invoice_lkt is not None:
-    #         results.append(invoice_lkt.compare_to(invoice_inf, loose))
-    #     elif invoice_inf is not None:
-    #         results.append(invoice_inf.compare_to(invoice_lkt, loose))
-
-    # create_summary_dir()
-    # create_detailed_dir()
-
-    # print("Creating summary...", end='')
-    # create_summary_referrer(results, loankit_dir, infynity_dir)
-    # print(OKGREEN + ' OK' + ENDC)
-
-    # print("Creating detailed reports...", end='')
-    # for result in results:
-    #     create_detailed_referrer(result)
     print(OKGREEN + ' DONE' + ENDC)
 
 
@@ -150,10 +125,14 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title, fil
         error = new_error('', files_b[key].filename, msg)
         summary_errors.append(error)
 
+    counter = 1
     for key in files_a.keys():
+        print(f'Processing {counter} of {len(files_a)} files', end='\r')
         errors = files_a[key].process_comparison(margin)
         if errors is not None:
             summary_errors = summary_errors + errors
+        counter += 1
+    print()
 
     # Create summary based on errors
     workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY + summary_filname + '.xlsx')
@@ -186,14 +165,14 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    rcti_compare_referrer(
-        0.0,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    # rcti_compare_broker(
+    # rcti_compare_referrer(
     #     0.0,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    rcti_compare_broker(
+        0.0,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
     # rcti_compare_branch(
     #     0.0,
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',

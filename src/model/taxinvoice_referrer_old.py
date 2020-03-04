@@ -606,3 +606,29 @@ def read_files_referrer(dir_: str, files: list) -> dict:
             # handle exception when there is a column missing in the file.
             pass
     return keys
+
+    # # A list with all keys generated in both dicts
+    # keys_all = merge_lists(invoices[LOANKIT].keys(), invoices[INFYNITY].keys())
+
+    # results = []
+
+    # for key in keys_all:
+    #     invoice_lkt = invoices[LOANKIT].get(key, None)
+    #     invoice_inf = invoices[INFYNITY].get(key, None)
+
+    #     # Check if its possible to do a comparison
+    #     if invoice_lkt is not None:
+    #         results.append(invoice_lkt.compare_to(invoice_inf, loose))
+    #     elif invoice_inf is not None:
+    #         results.append(invoice_inf.compare_to(invoice_lkt, loose))
+
+    # create_summary_dir()
+    # create_detailed_dir()
+
+    # print("Creating summary...", end='')
+    # create_summary_referrer(results, loankit_dir, infynity_dir)
+    # print(OKGREEN + ' OK' + ENDC)
+
+    # print("Creating detailed reports...", end='')
+    # for result in results:
+    #     create_detailed_referrer(result)
