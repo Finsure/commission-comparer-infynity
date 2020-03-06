@@ -73,7 +73,36 @@ class BrokerTaxInvoice(TaxInvoice):
         col_a = 0
         col_b = 10
 
-        # TODO The broker and referrer DETAILE reports dont have a the top fields being added.
+        format_ = fmt_error if not self.equal_from else None
+        worksheet.write(row, col_a, 'From')
+        worksheet.write(row, col_a + 1, self.from_, format_)
+        worksheet.write(row, col_b, 'From')
+        worksheet.write(row, col_b + 1, self.pair.from_, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_to else None
+        worksheet.write(row, col_a, 'To')
+        worksheet.write(row, col_a + 1, self.to, format_)
+        worksheet.write(row, col_b, 'To')
+        worksheet.write(row, col_b + 1, self.pair.to, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_abn else None
+        worksheet.write(row, col_a, 'ABN')
+        worksheet.write(row, col_a + 1, self.abn, format_)
+        worksheet.write(row, col_b, 'ABN')
+        worksheet.write(row, col_b + 1, self.pair.abn, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_bsb else None
+        worksheet.write(row, col_a, 'BSB')
+        worksheet.write(row, col_a + 1, self.bsb, format_)
+        worksheet.write(row, col_b, 'BSB')
+        worksheet.write(row, col_b + 1, self.pair.bsb, format_)
+        row += 1
+        format_ = fmt_error if not self.equal_account else None
+        worksheet.write(row, col_a, 'Account')
+        worksheet.write(row, col_a + 1, self.account, format_)
+        worksheet.write(row, col_b, 'Account')
+        worksheet.write(row, col_b + 1, self.pair.account, format_)
+        row += 2
 
         for index, item in enumerate(HEADER_BROKER):
             worksheet.write(row, col_a + index, item, fmt_table_header)
@@ -130,6 +159,36 @@ class BrokerTaxInvoice(TaxInvoice):
         else:
             self.datarows_count[row.key] = 1  # Increment row count for that key
             self.datarows[row.key] = row  # Add row to the list
+
+    @property
+    def equal_from(self):
+        if self.pair is None:
+            return False
+        return self.from_ == self.pair.from_
+
+    @property
+    def equal_to(self):
+        if self.pair is None:
+            return False
+        return self.to == self.pair.to
+
+    @property
+    def equal_abn(self):
+        if self.pair is None:
+            return False
+        return self.abn == self.pair.abn
+
+    @property
+    def equal_bsb(self):
+        if self.pair is None:
+            return False
+        return self.bsb == self.pair.bsb
+
+    @property
+    def equal_account(self):
+        if self.pair is None:
+            return False
+        return self.account == self.pair.account
 
 
 class BrokerInvoiceRow(InvoiceRow):
