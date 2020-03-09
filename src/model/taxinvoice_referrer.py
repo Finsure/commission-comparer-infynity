@@ -244,7 +244,7 @@ class ReferrerTaxInvoice(TaxInvoice):
             row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
             self.datarows[row.key] = row  # Add row to the list
         else:
-            self.datarows_count[row.key] = 1  # Increment row count for that key
+            self.datarows_count[row.key] = 0  # Start counter
             self.datarows[row.key] = row  # Add row to the list
 
     # region Properties

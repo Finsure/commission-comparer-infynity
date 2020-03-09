@@ -719,7 +719,7 @@ class BranchTaxInvoice(TaxInvoice):
             row.key = row._generate_key(counter_dict[row.key])  # Generate new key for the record
             datarows_dict[row.key] = row  # Add row to the list
         else:
-            counter_dict[row.key] = 1  # Increment row count for that key
+            counter_dict[row.key] = 0  # Start counter
             datarows_dict[row.key] = row  # Add row to the list
 
     # region Properties
@@ -793,7 +793,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         filename_parts = self.filename.split('_')
         filename_parts = filename_parts[0:5]
-        filename_forkey = '_'.join(filename_parts)
+        filename_forkey = ''.join(filename_parts)
 
         sha.update(filename_forkey.encode(ENCODING))
         return sha.hexdigest()

@@ -3,6 +3,7 @@ def sanitize(s: str):
     s_sanitized = s.strip().split(' ')
     s_sanitized = ''.join(s_sanitized).split('_')
     s_sanitized = ''.join(s_sanitized)
+    s_sanitized = ''.join(e for e in s_sanitized if e.isalnum())
     return s_sanitized.lower()
 
 

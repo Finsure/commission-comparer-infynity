@@ -148,18 +148,19 @@ class BrokerTaxInvoice(TaxInvoice):
 
         filename_parts = self.filename.split('_')
         filename_parts = filename_parts[:-6]  # Remove process ID and date stamp
-        filename_forkey = '_'.join(filename_parts)
+        filename_forkey = ''.join(filename_parts)
 
         sha.update(filename_forkey.encode(ENCODING))
         return sha.hexdigest()
 
     def __add_datarow(self, row):
         if row.key in self.datarows.keys():  # If the row already exists
+            # do similarity check
             self.datarows_count[row.key] += 1  # Increment row count for that key
             row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
             self.datarows[row.key] = row  # Add row to the list
         else:
-            self.datarows_count[row.key] = 1  # Increment row count for that key
+            self.datarows_count[row.key] = 0  # Start counter
             self.datarows[row.key] = row  # Add row to the list
 
     @property
