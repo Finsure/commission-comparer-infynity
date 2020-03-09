@@ -121,10 +121,8 @@ class BrokerTaxInvoice(TaxInvoice):
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += BrokerInvoiceRow.write_row(
-                    worksheet, self, pair_row, row, fmt_error, 'right')
-            else:
-                self.summary_errors += BrokerInvoiceRow.write_row(
-                    worksheet, self, self_row, row, fmt_error)
+                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
+            self.summary_errors += BrokerInvoiceRow.write_row(worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
@@ -134,7 +132,10 @@ class BrokerTaxInvoice(TaxInvoice):
                 worksheet, self, self.pair.datarows[key], row, fmt_error, 'right')
             row += 1
 
-        workbook.close()
+        if len(self.summary_errors) > 0:
+            workbook.close()
+        else:
+            del workbook
         return self.summary_errors
 
     def create_workbook(self):
@@ -301,7 +302,7 @@ class BrokerInvoiceRow(InvoiceRow):
         return sha.hexdigest()
 
     @staticmethod
-    def write_row(worksheet, invoice, element, row, fmt_error, side='left'):
+    def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
         col = 0
         if side == 'right':
             col = 10
@@ -331,24 +332,30 @@ class BrokerInvoiceRow(InvoiceRow):
         errors = []
         line = element.row_number
         if element.pair is not None:
-            if not element.equal_bank:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Bank does not match', line, element.bank, element.pair.bank))
-            if not element.equal_loan_balance:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Loan Balance does not match', line, element.loan_balance, element.pair.loan_balance))
-            if not element.equal_amount_paid:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line, element.amount_paid, element.pair.amount_paid))
-            if not element.equal_gst_paid:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Amount does not match', line, element.gst_paid, element.pair.gst_paid))
-            if not element.equal_total_amount_paid:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Total Amount Paid does not match', line, element.total_amount_paid, element.pair.total_amount_paid))
-            if not element.equal_comments:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Total Amount Paid does not match', line, element.comments, element.pair.comments))
+            if write_errors:
+                if not element.equal_bank:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Bank does not match', line, element.bank, element.pair.bank))
+
+                if not element.equal_loan_balance:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Loan Balance does not match', line, element.loan_balance, element.pair.loan_balance))
+
+                if not element.equal_amount_paid:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line, element.amount_paid, element.pair.amount_paid))
+
+                if not element.equal_gst_paid:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Amount does not match', line, element.gst_paid, element.pair.gst_paid))
+
+                if not element.equal_total_amount_paid:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Total Amount Paid does not match', line, element.total_amount_paid, element.pair.total_amount_paid))
+
+                if not element.equal_comments:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Total Amount Paid does not match', line, element.comments, element.pair.comments))
         else:
             errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line))
 
@@ -357,7 +364,9 @@ class BrokerInvoiceRow(InvoiceRow):
 
 def read_files_broker(dir_: str, files: list) -> dict:
     keys = {}
+    counter = 1
     for file in files:
+        print(f'Parsing {counter} of {len(files)} files from {dir_}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:
@@ -366,4 +375,6 @@ def read_files_broker(dir_: str, files: list) -> dict:
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
+        counter += 1
+    print()
     return keys

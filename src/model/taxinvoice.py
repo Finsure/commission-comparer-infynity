@@ -89,24 +89,15 @@ def create_dirs():
         os.mkdir(OUTPUT_DIR_SUMMARY)
 
 
-def new_error(file_a, file_b, msg, line='', first_a='', first_b='', second_a='', second_b='', third_a='',
-              third_b='', fourth_a='', fourth_b='', fifth_a='', fifth_b='', tab=''):
+def new_error(file_a, file_b, msg, line='', value_a='', value_b='', tab=''):
     return {
         'file_a': file_a,
         'file_b': file_b,
         'tab': tab,
         'msg': msg,
         'line': line,
-        'first_a': first_a,
-        'first_b': first_b,
-        'second_a': second_a,
-        'second_b': second_b,
-        'third_a': third_a,
-        'third_b': third_b,
-        'fourth_a': fourth_a,
-        'fourth_b': fourth_b,
-        'fifth_a': fifth_a,
-        'fifth_b': fifth_b
+        'value_a': value_a,
+        'value_b': value_b,
     }
 
 
@@ -117,16 +108,8 @@ def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, file
     worksheet.write(row, col + 2, 'Message', header_fmt)
     worksheet.write(row, col + 3, 'Tab', header_fmt)
     worksheet.write(row, col + 4, 'Line', header_fmt)
-    worksheet.write(row, col + 5, 'DEV A', header_fmt)
-    worksheet.write(row, col + 6, 'Finsure A', header_fmt)
-    worksheet.write(row, col + 7, 'DEV B', header_fmt)
-    worksheet.write(row, col + 8, 'Finsure B', header_fmt)
-    worksheet.write(row, col + 9, 'DEV C', header_fmt)
-    worksheet.write(row, col + 10, 'Finsure C', header_fmt)
-    worksheet.write(row, col + 11, 'DEV D', header_fmt)
-    worksheet.write(row, col + 12, 'Finsure D', header_fmt)
-    worksheet.write(row, col + 13, 'DEV E', header_fmt)
-    worksheet.write(row, col + 14, 'Finsure E', header_fmt)
+    worksheet.write(row, col + 5, 'A Value', header_fmt)
+    worksheet.write(row, col + 6, 'B Value', header_fmt)
     row += 1
 
     # Write errors
@@ -136,16 +119,8 @@ def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, file
         worksheet.write(row, col + 2, error['msg'])
         worksheet.write(row, col + 3, error['tab'])
         worksheet.write(row, col + 4, error['line'])
-        worksheet.write(row, col + 5, error['first_a'])
-        worksheet.write(row, col + 6, error['first_b'])
-        worksheet.write(row, col + 7, error['second_a'])
-        worksheet.write(row, col + 8, error['second_b'])
-        worksheet.write(row, col + 9, error['third_a'])
-        worksheet.write(row, col + 10, error['third_b'])
-        worksheet.write(row, col + 11, error['fourth_a'])
-        worksheet.write(row, col + 12, error['fourth_b'])
-        worksheet.write(row, col + 13, error['fifth_a'])
-        worksheet.write(row, col + 14, error['fifth_b'])
+        worksheet.write(row, col + 5, error['value_a'])
+        worksheet.write(row, col + 6, error['value_b'])
         row += 1
 
     return worksheet

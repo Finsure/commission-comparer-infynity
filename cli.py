@@ -47,7 +47,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         loankit_dir,
         infynity_dir)
 
-    print(OKGREEN + ' DONE' + ENDC)
+    print(OKGREEN + 'DONE' + ENDC)
 
 
 # @click.command('compare_broker')
@@ -169,14 +169,14 @@ if __name__ == '__main__':
         0.0,
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    # rcti_compare_broker(
-    #     0.0,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    # rcti_compare_branch(
-    #     0.0,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    rcti_compare_broker(
+        0.0,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    rcti_compare_branch(
+        0.0,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
 
 # SIMULATE REFERRER
 # python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/"

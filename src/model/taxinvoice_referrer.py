@@ -165,7 +165,6 @@ class ReferrerTaxInvoice(TaxInvoice):
         format_ = fmt_error if not self.equal_final_total else None
         worksheet.write(row, col_a, 'Total')
         worksheet.write(row, col_a + 1, self.final_total, format_)
-        row += 1
 
         if self.pair is not None:
             row = 0
@@ -196,7 +195,8 @@ class ReferrerTaxInvoice(TaxInvoice):
             format_ = fmt_error if not self.equal_final_total else None
             worksheet.write(row, col_b, 'Total')
             worksheet.write(row, col_b + 1, self.final_total, format_)
-            row += 1
+
+        row += 2
 
         for index, item in enumerate(HEADER_REFERRER):
             worksheet.write(row, col_a + index, item, fmt_table_header)
@@ -215,10 +215,8 @@ class ReferrerTaxInvoice(TaxInvoice):
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += ReferrerInvoiceRow.write_row(
-                    worksheet, self, pair_row, row, fmt_error, 'right')
-            else:
-                self.summary_errors += ReferrerInvoiceRow.write_row(
-                    worksheet, self, self_row, row, fmt_error)
+                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
+            self.summary_errors += ReferrerInvoiceRow.write_row(worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
@@ -228,7 +226,10 @@ class ReferrerTaxInvoice(TaxInvoice):
                 worksheet, self, self.pair.datarows[key], row, fmt_error, 'right')
             row += 1
 
-        workbook.close()
+        if len(self.summary_errors) > 0:
+            workbook.close()
+        else:
+            del workbook
         return self.summary_errors
 
     def create_workbook(self):
@@ -393,7 +394,7 @@ class ReferrerInvoiceRow(InvoiceRow):
         return sha.hexdigest()
 
     @staticmethod
-    def write_row(worksheet, invoice, element, row, fmt_error, side='left'):
+    def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
         col = 0
         if side == 'right':
             col = 8
@@ -414,18 +415,18 @@ class ReferrerInvoiceRow(InvoiceRow):
         errors = []
         line = element.row_number
         if element.pair is not None:
+            if write_errors:
+                if not element.equal_amount_paid:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line, element.amount_paid, element.pair.amount_paid))
 
-            if not element.equal_amount_paid:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line, element.amount_paid, element.pair.amount_paid))
+                if not element.equal_gst_paid:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'GST Paid does not match', line, element.gst_paid, element.pair.gst_paid))
 
-            if not element.equal_gst_paid:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'GST Paid does not match', line, element.gst_paid, element.pair.gst_paid))
-
-            if not element.equal_total:
-                errors.append(new_error(
-                    invoice.filename, invoice.pair.filename, 'Total does not match', line, element.total, element.pair.total))
+                if not element.equal_total:
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, 'Total does not match', line, element.total, element.pair.total))
 
         else:
             errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line))
@@ -435,7 +436,9 @@ class ReferrerInvoiceRow(InvoiceRow):
 
 def read_files_referrer(dir_: str, files: list) -> dict:
     keys = {}
+    counter = 1
     for file in files:
+        print(f'Parsing {counter} of {len(files)} files from {dir_}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:
@@ -444,4 +447,6 @@ def read_files_referrer(dir_: str, files: list) -> dict:
         except IndexError:
             # handle exception when there is a column missing in the file.
             pass
+        counter += 1
+    print()
     return keys
