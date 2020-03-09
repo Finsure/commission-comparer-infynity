@@ -7,6 +7,8 @@ import xlsxwriter
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_REFERRER, new_error,
                                   get_header_format, get_error_format)
 
+from src import utils as u
+
 HEADER_REFERRER = ['Commission Type', 'Client', 'Referrer Name', 'Amount Paid', 'GST Paid', 'Total Amount Paid']
 
 
@@ -342,19 +344,19 @@ class ReferrerInvoiceRow(InvoiceRow):
     def equal_commission_type(self):
         if self.pair is None:
             return False
-        return self.commission_type == self.pair.commission_type
+        return u.sanitize(self.commission_type) == u.sanitize(self.pair.commission_type)
 
     @property
     def equal_client(self):
         if self.pair is None:
             return False
-        return self.client == self.pair.client
+        return u.sanitize(self.client) == u.sanitize(self.pair.client)
 
     @property
     def equal_referrer(self):
         if self.pair is None:
             return False
-        return self.referrer == self.pair.referrer
+        return u.sanitize(self.referrer) == u.sanitize(self.pair.referrer)
 
     @property
     def equal_amount_paid(self):
@@ -377,9 +379,9 @@ class ReferrerInvoiceRow(InvoiceRow):
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.commission_type.encode(ENCODING))
-        sha.update(self.client.encode(ENCODING))
-        sha.update(self.referrer.encode(ENCODING))
+        sha.update(u.sanitize(self.commission_type).encode(ENCODING))
+        sha.update(u.sanitize(self.client).encode(ENCODING))
+        sha.update(u.sanitize(self.referrer).encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 

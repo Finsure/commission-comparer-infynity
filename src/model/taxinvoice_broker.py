@@ -7,6 +7,7 @@ import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER, new_error,
                                   get_header_format, get_error_format)
+from src import utils as u
 
 HEADER_BROKER = ['Commission Type', 'Client', 'Commission Ref ID', 'Bank', 'Loan Balance',
                  'Amount Paid', 'GST Paid', 'Total Amount Paid', 'Comments']
@@ -247,7 +248,7 @@ class BrokerInvoiceRow(InvoiceRow):
     def equal_bank(self):
         if self.pair is None:
             return False
-        return self.bank == self.pair.bank
+        return u.sanitize(self.bank) == u.sanitize(self.pair.bank)
 
     @property
     def equal_loan_balance(self):
@@ -277,13 +278,13 @@ class BrokerInvoiceRow(InvoiceRow):
     def equal_comments(self):
         if self.pair is None:
             return False
-        return self.comments == self.pair.comments
+        return u.sanitize(self.comments) == u.sanitize(self.pair.comments)
     # endregion
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.commission_type.encode(ENCODING))
-        sha.update(self.client.encode(ENCODING))
+        sha.update(u.sanitize(self.commission_type).encode(ENCODING))
+        sha.update(u.sanitize(self.client).encode(ENCODING))
         sha.update(self.reference_id.encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()

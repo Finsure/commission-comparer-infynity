@@ -9,6 +9,8 @@ from xlrd.biffh import XLRDError
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BRANCH, new_error,
                                   get_header_format, get_error_format)
 
+from src import utils as u
+
 HEADER_VBI = ['Broker', 'Lender', 'Client', 'Ref #', 'Settled Loan',
               'Settlement Date', 'Commission', 'GST', 'Fee/Commission Split',
               'Fees GST', 'Remitted/Net', 'Paid To Broker', 'Paid To Referrer', 'Retained']
@@ -126,10 +128,8 @@ class BranchTaxInvoice(TaxInvoice):
                     index)
                 if tab == TAB_VBI_DATA:
                     self.__add_datarow(self.vbi_data_rows, self.vbi_data_rows_count, vbidatarow)
-                    # self.vbi_data_rows[vbidatarow.key] = vbidatarow
                 elif tab == TAB_UPFRONT_DATA:
                     self.__add_datarow(self.upfront_data_rows, self.upfront_data_rows_count, vbidatarow)
-                    # self.upfront_data_rows[vbidatarow.key] = vbidatarow
         except XLRDError:
             pass
 
@@ -159,7 +159,6 @@ class BranchTaxInvoice(TaxInvoice):
                 float(row['Paid To Referrer']),
                 float(row['Retained']),
                 index)
-            # self.trail_data_rows[traildatarow.key] = traildatarow
             self.__add_datarow(self.trail_data_rows, self.trail_data_rows_count, traildatarow)
 
     def parse_tab_tax_invoice(self):
@@ -199,13 +198,11 @@ class BranchTaxInvoice(TaxInvoice):
         for index, row in df_a.iterrows():
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
             self.__add_datarow(self.tax_invoice_data_rows_a, self.tax_invoice_data_rows_a_count, invoicerow)
-            # self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
 
         if section2_start is not None:
             for index, row in df_b.iterrows():
                 invoicerow = TaxInvoiceDataRow(' '.join(row[0].split()), row[1], row[2], row[3], row[4], index)
                 self.__add_datarow(self.tax_invoice_data_rows_b, self.tax_invoice_data_rows_b_count, invoicerow)
-                # self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
 
     def parse_tab_rcti(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_RCTI)
@@ -223,7 +220,6 @@ class BranchTaxInvoice(TaxInvoice):
         for index, row in df.iterrows():
             rctirow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
             self.__add_datarow(self.rcti_data_rows, self.rcti_data_rows_count, rctirow)
-            # self.rcti_data_rows[rctirow.key] = rctirow
 
     def parse_tab_summary(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_SUMMARY)
@@ -295,31 +291,26 @@ class BranchTaxInvoice(TaxInvoice):
         # In this case we can use the RCTIDataRow bc the data matches it HURRAY!!!
         for index, row in df1.iterrows():
             summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            # self.summary_summary[summaryrow.key] = summaryrow
             self.__add_datarow(self.summary_summary, self.summary_summary_count, summaryrow)
 
         if df2_start is not None:
             for index, row in de2.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                # self.summary_ptbff[summaryrow.key] = summaryrow
                 self.__add_datarow(self.summary_ptbff, self.summary_ptbff_count, summaryrow)
 
         if df3_start is not None:
             for index, row in df3.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                # self.summary_mobbtb[summaryrow.key] = summaryrow
                 self.__add_datarow(self.summary_mobbtb, self.summary_mobbtb_count, summaryrow)
 
         if df4_start is not None:
             for index, row in df4.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                # self.summary_ptrff[summaryrow.key] = summaryrow
                 self.__add_datarow(self.summary_ptrff, self.summary_ptrff_count, summaryrow)
 
         if df5_start is not None:
             for index, row in df5.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                # self.summary_mobrtb[summaryrow.key] = summaryrow
                 self.__add_datarow(self.summary_mobrtb, self.summary_mobrtb_count, summaryrow)
 
     # OH GOD WHY?
@@ -838,6 +829,7 @@ class VBIDataRow(InvoiceRow):
         self._key = self._generate_key()
         self._key_full = self._generate_key_full()
 
+    # region Properties
     @property
     def key(self):
         return self._key
@@ -874,7 +866,7 @@ class VBIDataRow(InvoiceRow):
     def equal_referrer(self):
         if self.pair is None:
             return False
-        return self.referrer == self.pair.referrer
+        return u.sanitize(self.referrer) == u.sanitize(self.pair.referrer)
 
     @property
     def equal_settled_loan(self):
@@ -886,7 +878,7 @@ class VBIDataRow(InvoiceRow):
     def equal_settlement_date(self):
         if self.pair is None:
             return False
-        return self.settlement_date == self.pair.settlement_date
+        return u.sanitize(self.settlement_date) == u.sanitize(self.pair.settlement_date)
 
     @property
     def equal_commission(self):
@@ -951,12 +943,13 @@ class VBIDataRow(InvoiceRow):
             and self.equal_paid_to_referrer()
             and self.equal_retained()
         )
+    # endregion
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.broker.lower().encode(ENCODING))
-        sha.update(self.lender.lower().encode(ENCODING))
-        sha.update(self.client.lower().encode(ENCODING))
+        sha.update(u.sanitize(self.broker).encode(ENCODING))
+        sha.update(u.sanitize(self.lender).encode(ENCODING))
+        sha.update(u.sanitize(self.client).encode(ENCODING))
         sha.update(self.ref_no.lower().encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
 
@@ -1121,13 +1114,13 @@ class TrailDataRow(InvoiceRow):
     def equal_lender(self):
         if self.pair is None:
             return False
-        return self.lender == self.pair.lender
+        return u.sanitize(self.lender) == u.sanitize(self.pair.lender)
 
     @property
     def equal_referrer(self):
         if self.pair is None:
             return False
-        return self.referrer == self.pair.referrer
+        return u.sanitize(self.referrer) == u.sanitize(self.pair.referrer)
 
     @property
     def equal_loan_balance(self):
@@ -1208,8 +1201,8 @@ class TrailDataRow(InvoiceRow):
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.broker.lower().encode(ENCODING))
-        sha.update(self.client.lower().encode(ENCODING))
+        sha.update(u.sanitize(self.broker).encode(ENCODING))
+        sha.update(u.sanitize(self.client).encode(ENCODING))
         sha.update(self.ref_no.lower().encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
@@ -1366,7 +1359,7 @@ class TaxInvoiceDataRow(InvoiceRow):
     def equal_description(self):
         if self.pair is None:
             return False
-        return self.description == self.pair.description
+        return u.sanitize(self.description) == u.sanitize(self.pair.description)
 
     @property
     def equal_amount(self):
@@ -1390,7 +1383,7 @@ class TaxInvoiceDataRow(InvoiceRow):
     def equal_comments(self):
         if self.pair is None:
             return False
-        return self.comments == self.pair.comments
+        return u.sanitize(self.comments) == u.sanitize(self.pair.comments)
 
     @property
     def equal_all(self):
@@ -1405,7 +1398,7 @@ class TaxInvoiceDataRow(InvoiceRow):
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.description.lower().encode(ENCODING))
+        sha.update(u.sanitize(self.description).encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
@@ -1510,7 +1503,7 @@ class RCTIDataRow(InvoiceRow):
     def equal_description(self):
         if self.pair is None:
             return False
-        return self.description == self.pair.description
+        return u.sanitize(self.description) == u.sanitize(self.pair.description)
 
     @property
     def equal_amount(self):
@@ -1542,7 +1535,7 @@ class RCTIDataRow(InvoiceRow):
 
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
-        sha.update(self.description.lower().encode(ENCODING))
+        sha.update(u.sanitize(self.description).encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 

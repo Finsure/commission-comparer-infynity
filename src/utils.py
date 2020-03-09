@@ -1,4 +1,11 @@
 
+def sanitize(s: str):
+    s_sanitized = s.strip().split(' ')
+    s_sanitized = ''.join(s_sanitized).split('_')
+    s_sanitized = ''.join(s_sanitized)
+    return s_sanitized.lower()
+
+
 def merge_lists(l1: list, l2: list) -> list:
     difference = list(set(l2) - set(l1))
     return list(l1) + difference
