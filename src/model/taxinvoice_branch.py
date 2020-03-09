@@ -43,16 +43,21 @@ class BranchTaxInvoice(TaxInvoice):
 
         # VBI Data tab fields
         self.vbi_data_rows = {}
+        self.vbi_data_rows_count = {}
 
         # Trail Data tab fields
         self.trail_data_rows = {}
+        self.trail_data_rows_count = {}
 
         # Upfront Data tab fields
         self.upfront_data_rows = {}
+        self.upfront_data_rows_count = {}
 
         # Tax Invoice tab fields
         self.tax_invoice_data_rows_a = {}
+        self.tax_invoice_data_rows_a_count = {}
         self.tax_invoice_data_rows_b = {}
+        self.tax_invoice_data_rows_b_count = {}
         self.tax_invoice_from = ''
         self.tax_invoice_from_abn = ''
         self.tax_invoice_to = ''
@@ -60,6 +65,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         # RCTI tab fields
         self.rcti_data_rows = {}
+        self.rcti_data_rows_count = {}
         self.rcti_from = ''
         self.rcti_from_abn = ''
         self.rcti_to = ''
@@ -67,15 +73,20 @@ class BranchTaxInvoice(TaxInvoice):
 
         # Summary_tab_fields
         self.summary_summary = {}
+        self.summary_summary_count = {}
         self.summary_ptbff = {}  # payment to brokers from finsure
+        self.summary_ptbff_count = {}
         self.summary_mobbtb = {}  # money owned by brokers to branch
+        self.summary_mobbtb_count = {}
         self.summary_ptrff = {}  # payment to referrers from finsure
+        self.summary_ptrff_count = {}
         self.summary_mobrtb = {}  # money owned by referrers to branch
+        self.summary_mobrtb_count = {}
         self.summary_from = ''
         self.summary_to = ''
 
         self.summary_errors = []
-        self._key = self.__generate_key()
+        self._key = self._generate_key()
         self.parse()
 
     def parse(self):
@@ -114,9 +125,11 @@ class BranchTaxInvoice(TaxInvoice):
                     float(row['Retained']),
                     index)
                 if tab == TAB_VBI_DATA:
-                    self.vbi_data_rows[vbidatarow.key] = vbidatarow
+                    self.__add_datarow(self.vbi_data_rows, self.vbi_data_rows_count, vbidatarow)
+                    # self.vbi_data_rows[vbidatarow.key] = vbidatarow
                 elif tab == TAB_UPFRONT_DATA:
-                    self.upfront_data_rows[vbidatarow.key] = vbidatarow
+                    self.__add_datarow(self.upfront_data_rows, self.upfront_data_rows_count, vbidatarow)
+                    # self.upfront_data_rows[vbidatarow.key] = vbidatarow
         except XLRDError:
             pass
 
@@ -146,7 +159,8 @@ class BranchTaxInvoice(TaxInvoice):
                 float(row['Paid To Referrer']),
                 float(row['Retained']),
                 index)
-            self.trail_data_rows[traildatarow.key] = traildatarow
+            # self.trail_data_rows[traildatarow.key] = traildatarow
+            self.__add_datarow(self.trail_data_rows, self.trail_data_rows_count, traildatarow)
 
     def parse_tab_tax_invoice(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_TAX_INVOICE)
@@ -184,12 +198,14 @@ class BranchTaxInvoice(TaxInvoice):
 
         for index, row in df_a.iterrows():
             invoicerow = TaxInvoiceDataRow(row[0], row[1], row[2], row[3], row[4], index)
-            self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
+            self.__add_datarow(self.tax_invoice_data_rows_a, self.tax_invoice_data_rows_a_count, invoicerow)
+            # self.tax_invoice_data_rows_a[invoicerow.key] = invoicerow
 
         if section2_start is not None:
             for index, row in df_b.iterrows():
                 invoicerow = TaxInvoiceDataRow(' '.join(row[0].split()), row[1], row[2], row[3], row[4], index)
-                self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
+                self.__add_datarow(self.tax_invoice_data_rows_b, self.tax_invoice_data_rows_b_count, invoicerow)
+                # self.tax_invoice_data_rows_b[invoicerow.key] = invoicerow
 
     def parse_tab_rcti(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_RCTI)
@@ -206,7 +222,8 @@ class BranchTaxInvoice(TaxInvoice):
 
         for index, row in df.iterrows():
             rctirow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.rcti_data_rows[rctirow.key] = rctirow
+            self.__add_datarow(self.rcti_data_rows, self.rcti_data_rows_count, rctirow)
+            # self.rcti_data_rows[rctirow.key] = rctirow
 
     def parse_tab_summary(self):
         df = pandas.read_excel(self.full_path, sheet_name=TAB_SUMMARY)
@@ -278,27 +295,32 @@ class BranchTaxInvoice(TaxInvoice):
         # In this case we can use the RCTIDataRow bc the data matches it HURRAY!!!
         for index, row in df1.iterrows():
             summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-            self.summary_summary[summaryrow.key] = summaryrow
+            # self.summary_summary[summaryrow.key] = summaryrow
+            self.__add_datarow(self.summary_summary, self.summary_summary_count, summaryrow)
 
         if df2_start is not None:
             for index, row in de2.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                self.summary_ptbff[summaryrow.key] = summaryrow
+                # self.summary_ptbff[summaryrow.key] = summaryrow
+                self.__add_datarow(self.summary_ptbff, self.summary_ptbff_count, summaryrow)
 
         if df3_start is not None:
             for index, row in df3.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                self.summary_mobbtb[summaryrow.key] = summaryrow
+                # self.summary_mobbtb[summaryrow.key] = summaryrow
+                self.__add_datarow(self.summary_mobbtb, self.summary_mobbtb_count, summaryrow)
 
         if df4_start is not None:
             for index, row in df4.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                self.summary_ptrff[summaryrow.key] = summaryrow
+                # self.summary_ptrff[summaryrow.key] = summaryrow
+                self.__add_datarow(self.summary_ptrff, self.summary_ptrff_count, summaryrow)
 
         if df5_start is not None:
             for index, row in df5.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
-                self.summary_mobrtb[summaryrow.key] = summaryrow
+                # self.summary_mobrtb[summaryrow.key] = summaryrow
+                self.__add_datarow(self.summary_mobrtb, self.summary_mobrtb_count, summaryrow)
 
     # OH GOD WHY?
     def process_comparison(self, margin=0.000001):
@@ -700,6 +722,15 @@ class BranchTaxInvoice(TaxInvoice):
             del workbook
         return self.summary_errors
 
+    def __add_datarow(self, datarows_dict, counter_dict, row):
+        if row.key in datarows_dict.keys():  # If the row already exists
+            counter_dict[row.key] += 1  # Increment row count for that key
+            row.key = row._generate_key(counter_dict[row.key])  # Generate new key for the record
+            datarows_dict[row.key] = row  # Add row to the list
+        else:
+            counter_dict[row.key] = 1  # Increment row count for that key
+            datarows_dict[row.key] = row  # Add row to the list
+
     # region Properties
     @property
     def equal_tax_invoice_from(self):
@@ -766,7 +797,7 @@ class BranchTaxInvoice(TaxInvoice):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
         return xlsxwriter.Workbook(OUTPUT_DIR_BRANCH + 'DETAILED_' + self.filename + suffix)
 
-    def __generate_key(self):
+    def _generate_key(self):
         sha = hashlib.sha256()
 
         filename_parts = self.filename.split('_')
@@ -804,12 +835,16 @@ class VBIDataRow(InvoiceRow):
         self._margin = 0
         self._document_row = document_row + 2 if document_row is not None else document_row
 
-        self._key = self.__generate_key()
-        self._key_full = self.__generate_key_full()
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
 
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -917,16 +952,17 @@ class VBIDataRow(InvoiceRow):
             and self.equal_retained()
         )
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.broker.lower().encode(ENCODING))
         sha.update(self.lender.lower().encode(ENCODING))
         sha.update(self.client.lower().encode(ENCODING))
         sha.update(self.ref_no.lower().encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
 
         return sha.hexdigest()
 
-    def __generate_key_full(self):
+    def _generate_key_full(self):
         sha = hashlib.sha256()
         sha.update(str(self.broker).encode(ENCODING))
         sha.update(str(self.lender).encode(ENCODING))
@@ -1045,13 +1081,17 @@ class TrailDataRow(InvoiceRow):
         self._margin = 0
         self._document_row = document_row + 2 if document_row is not None else document_row
 
-        self._key = self.__generate_key()
-        self._key_full = self.__generate_key_full()
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
 
     # region Properties
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -1166,14 +1206,15 @@ class TrailDataRow(InvoiceRow):
         )
     # endregion
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.broker.lower().encode(ENCODING))
         sha.update(self.client.lower().encode(ENCODING))
         sha.update(self.ref_no.lower().encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
-    def __generate_key_full(self):
+    def _generate_key_full(self):
         sha = hashlib.sha256()
         sha.update(str(self.broker).encode(ENCODING))
         sha.update(str(self.lender).encode(ENCODING))
@@ -1285,13 +1326,17 @@ class TaxInvoiceDataRow(InvoiceRow):
         self._margin = 0
         self._document_row = document_row + 2 if document_row is not None else document_row
 
-        self._key = self.__generate_key()
-        self._key_full = self.__generate_key_full()
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
 
     # region Properties
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -1358,12 +1403,13 @@ class TaxInvoiceDataRow(InvoiceRow):
         )
     # endregion
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.description.lower().encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
-    def __generate_key_full(self):
+    def _generate_key_full(self):
         sha = hashlib.sha256()
         sha.update(str(self.description).encode(ENCODING))
         sha.update(str(self.amount).encode(ENCODING))
@@ -1424,13 +1470,17 @@ class RCTIDataRow(InvoiceRow):
         self._margin = 0
         self._document_row = document_row + 2 if document_row is not None else document_row
 
-        self._key = self.__generate_key()
-        self._key_full = self.__generate_key_full()
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
 
     # region Properties
     @property
     def key(self):
         return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
 
     @property
     def key_full(self):
@@ -1490,12 +1540,13 @@ class RCTIDataRow(InvoiceRow):
         )
     # endregion
 
-    def __generate_key(self):
+    def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.description.lower().encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
-    def __generate_key_full(self):
+    def _generate_key_full(self):
         sha = hashlib.sha256()
         sha.update(str(self.description).encode(ENCODING))
         sha.update(str(self.amount).encode(ENCODING))
