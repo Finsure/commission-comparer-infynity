@@ -371,16 +371,24 @@ class BranchTaxInvoice(TaxInvoice):
                 worksheet_summary.write(row, col_b + index, item, fmt_table_header)
             row += 1
 
+            keys_unmatched = set(sections_pairs[sec_index].keys() - set(section.keys()))
+
             ignore_last_two = sec_index > 0
 
             for key in section.keys():
                 self_row = section[key]
-                pair_row = sections_pairs[sec_index].get(key, None)
+                pair_row = self.find_pair_row(self_row, sections_pairs[sec_index])
 
                 self_row.margin = margin
                 self_row.pair = pair_row
 
                 if pair_row is not None:
+                    # delete from pair list so it doesn't get matched again
+                    del sections_pairs[sec_index][pair_row.key_full]
+                    # Remove the key from the keys_unmatched if it is there
+                    if pair_row.key_full in keys_unmatched:
+                        keys_unmatched.remove(pair_row.key_full)
+
                     pair_row.margin = margin
                     pair_row.pair = self_row
                     self.summary_errors += RCTIDataRow.write_row(
@@ -390,8 +398,7 @@ class BranchTaxInvoice(TaxInvoice):
                     worksheet_summary, self, self_row, row, fmt_error, TAB_SUMMARY, ignore_last_two=ignore_last_two)
                 row += 1
 
-            alone_keys_infynity = set(sections_pairs[sec_index].keys() - set(section.keys()))
-            for key in alone_keys_infynity:
+            for key in keys_unmatched:
                 self.summary_errors += RCTIDataRow.write_row(
                     worksheet_summary, self, sections_pairs[sec_index][key], row, fmt_error, TAB_SUMMARY, 'right', ignore_last_two)
                 row += 1
@@ -460,14 +467,22 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_rcti.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
+        keys_unmatched = set(self.pair.rcti_data_rows.keys() - set(self.rcti_data_rows.keys()))
+
         for key in self.rcti_data_rows.keys():
             self_row = self.rcti_data_rows[key]
-            pair_row = self.pair.rcti_data_rows.get(key, None)
+            pair_row = self.find_pair_row(self_row, self.pair.rcti_data_rows)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.rcti_data_rows[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += RCTIDataRow.write_row(
@@ -476,8 +491,7 @@ class BranchTaxInvoice(TaxInvoice):
             self.summary_errors += RCTIDataRow.write_row(worksheet_rcti, self, self_row, row, fmt_error, TAB_RCTI)
             row += 1
 
-        alone_keys_infynity = set(self.pair.rcti_data_rows.keys() - set(self.rcti_data_rows.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += RCTIDataRow.write_row(
                 worksheet_rcti, self, self.pair.rcti_data_rows[key], row, fmt_error, TAB_RCTI, 'right')
             row += 1
@@ -544,14 +558,22 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_tax_invoice.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
-        for key in self.tax_invoice_data_rows_a.keys():
-            self_row = self.tax_invoice_data_rows_a[key]
-            pair_row = self.pair.tax_invoice_data_rows_a.get(key, None)
+        keys_unmatched = set(self.pair.tax_invoice_data_rows_a.keys() - set(self.tax_invoice_data_rows_a.keys()))
+
+        for key_full in self.tax_invoice_data_rows_a.keys():
+            self_row = self.tax_invoice_data_rows_a[key_full]
+            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_a)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.tax_invoice_data_rows_a[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += TaxInvoiceDataRow.write_row(
@@ -560,8 +582,7 @@ class BranchTaxInvoice(TaxInvoice):
             self.summary_errors += TaxInvoiceDataRow.write_row(worksheet_tax_invoice, self, self_row, row, fmt_error)
             row += 1
 
-        alone_keys_infynity = set(self.pair.tax_invoice_data_rows_a.keys() - set(self.tax_invoice_data_rows_a.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += TaxInvoiceDataRow.write_row(
                 worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_a[key], row, fmt_error, 'right')
             row += 1
@@ -573,14 +594,22 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_tax_invoice.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
-        for key in self.tax_invoice_data_rows_b.keys():
-            self_row = self.tax_invoice_data_rows_b[key]
-            pair_row = self.pair.tax_invoice_data_rows_b.get(key, None)
+        keys_unmatched = set(self.pair.tax_invoice_data_rows_b.keys() - set(self.tax_invoice_data_rows_b.keys()))
+
+        for key_full in self.tax_invoice_data_rows_b.keys():
+            self_row = self.tax_invoice_data_rows_b[key_full]
+            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_b)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.tax_invoice_data_rows_b[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += TaxInvoiceDataRow.write_row(
@@ -589,8 +618,7 @@ class BranchTaxInvoice(TaxInvoice):
             self.summary_errors += TaxInvoiceDataRow.write_row(worksheet_tax_invoice, self, self_row, row, fmt_error)
             row += 1
 
-        alone_keys_infynity = set(self.pair.tax_invoice_data_rows_b.keys() - set(self.tax_invoice_data_rows_b.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += TaxInvoiceDataRow.write_row(
                 worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_b[key], row, fmt_error, 'right')
             row += 1
@@ -608,15 +636,23 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_upfront.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
+        keys_unmatched = set(self.pair.upfront_data_rows.keys() - set(self.upfront_data_rows.keys()))
+
         # Code below is just to find the errors and write them into the spreadsheets
-        for key in self.upfront_data_rows.keys():
-            self_row = self.upfront_data_rows[key]
-            pair_row = self.pair.upfront_data_rows.get(key, None)
+        for key_full in self.upfront_data_rows.keys():
+            self_row = self.upfront_data_rows[key_full]
+            pair_row = self.find_pair_row(self_row, self.pair.upfront_data_rows)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.upfront_data_rows[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += VBIDataRow.write_row(
@@ -626,8 +662,7 @@ class BranchTaxInvoice(TaxInvoice):
             row += 1
 
         # Write unmatched records
-        alone_keys_infynity = set(self.pair.upfront_data_rows.keys() - set(self.upfront_data_rows.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += VBIDataRow.write_row(
                 worksheet_upfront, self, self.pair.upfront_data_rows[key], row, fmt_error, TAB_UPFRONT_DATA, 'right')
             row += 1
@@ -645,15 +680,23 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_trail.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
+        keys_unmatched = set(self.pair.trail_data_rows.keys() - set(self.trail_data_rows.keys()))
+
         # Code below is just to find the errors and write them into the spreadsheets
-        for key in self.trail_data_rows.keys():
-            self_row = self.trail_data_rows[key]
-            pair_row = self.pair.trail_data_rows.get(key, None)
+        for key_full in self.trail_data_rows.keys():
+            self_row = self.trail_data_rows[key_full]
+            pair_row = self.find_pair_row(self_row, self.pair.trail_data_rows)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.trail_data_rows[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += TrailDataRow.write_row(
@@ -663,8 +706,7 @@ class BranchTaxInvoice(TaxInvoice):
             row += 1
 
         # Write unmatched records
-        alone_keys_infynity = set(self.pair.trail_data_rows.keys() - set(self.trail_data_rows.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += TrailDataRow.write_row(
                 worksheet_trail, self, self.pair.trail_data_rows[key], row, fmt_error, 'right')
             row += 1
@@ -682,15 +724,23 @@ class BranchTaxInvoice(TaxInvoice):
             worksheet_vbi.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
+        keys_unmatched = set(self.pair.vbi_data_rows.keys() - set(self.vbi_data_rows.keys()))
+
         # Code below is just to find the errors and write them into the spreadsheets
-        for key in self.vbi_data_rows.keys():
-            self_row = self.vbi_data_rows[key]
+        for key_full in self.vbi_data_rows.keys():
+            self_row = self.vbi_data_rows[key_full]
             pair_row = self.pair.vbi_data_rows.get(key, None)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.vbi_data_rows[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += VBIDataRow.write_row(
@@ -700,8 +750,7 @@ class BranchTaxInvoice(TaxInvoice):
             row += 1
 
         # Write unmatched records
-        alone_keys_infynity = set(self.pair.vbi_data_rows.keys() - set(self.vbi_data_rows.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += VBIDataRow.write_row(
                 worksheet_vbi, self, self.pair.vbi_data_rows[key], row, fmt_error, TAB_VBI_DATA, 'right')
             row += 1
@@ -714,13 +763,13 @@ class BranchTaxInvoice(TaxInvoice):
         return self.summary_errors
 
     def __add_datarow(self, datarows_dict, counter_dict, row):
-        if row.key in datarows_dict.keys():  # If the row already exists
-            counter_dict[row.key] += 1  # Increment row count for that key
-            row.key = row._generate_key(counter_dict[row.key])  # Generate new key for the record
-            datarows_dict[row.key] = row  # Add row to the list
+        if row.key_full in datarows_dict.keys():  # If the row already exists
+            counter_dict[row.key_full] += 1  # Increment row count for that key_full
+            row.key_full = row._generate_key(counter_dict[row.key_full])  # Generate new key_full for the record
+            datarows_dict[row.key_full] = row  # Add row to the list
         else:
-            counter_dict[row.key] = 0  # Start counter
-            datarows_dict[row.key] = row  # Add row to the list
+            counter_dict[row.key_full] = 0  # Start counter
+            datarows_dict[row.key_full] = row  # Add row to the list
 
     # region Properties
     @property
@@ -784,6 +833,26 @@ class BranchTaxInvoice(TaxInvoice):
         return self.summary_to == self.pair.summary_to
     # endregion
 
+    def find_pair_row(self, row, pair_datarows):
+        # Match by full_key
+        pair_row = pair_datarows.get(row.key_full, None)
+        if pair_row is not None:
+            return pair_row
+
+        # We want to match by similarity before matching by the key
+        # Match by similarity
+        for _, item in pair_datarows.items():
+            if row.equals(item):
+                return item
+
+        # Match by key
+        for _, item in pair_datarows.items():
+            if row.key == item.key:
+                return item
+
+        # Return None if nothing found
+        return None
+
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
         return xlsxwriter.Workbook(OUTPUT_DIR_BRANCH + 'DETAILED_' + self.filename + suffix)
@@ -841,6 +910,10 @@ class VBIDataRow(InvoiceRow):
     @property
     def key_full(self):
         return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
 
     @property
     def pair(self):
@@ -974,6 +1047,27 @@ class VBIDataRow(InvoiceRow):
         sha.update(str(self.retained).encode(ENCODING))
         return sha.hexdigest()
 
+    def equals(self, obj):
+        if type(obj) != VBIDataRow:
+            return False
+
+        return (
+            u.sanitize(self.broker) == u.sanitize(obj.broker)
+            and u.sanitize(self.lender) == u.sanitize(obj.lender)
+            and u.sanitize(self.client) == u.sanitize(obj.client)
+            and u.sanitize(self.ref_no) == u.sanitize(obj.ref_no)
+            and self.settlement_date == obj.settlement_date
+            and self.compare_numbers(self.settled_loan, obj.settled_loan, self.margin)
+            and self.compare_numbers(self.commission, obj.commission, self.margin)
+            and self.compare_numbers(self.gst, obj.gst, self.margin)
+            and self.compare_numbers(self.commission_split, obj.commission_split, self.margin)
+            and self.compare_numbers(self.fees_gst, obj.fees_gst, self.margin)
+            and self.compare_numbers(self.remitted, obj.remitted, self.margin)
+            and self.compare_numbers(self.paid_to_broker, obj.paid_to_broker, self.margin)
+            and self.compare_numbers(self.paid_to_referrer, obj.paid_to_referrer, self.margin)
+            and self.compare_numbers(self.retained, obj.retained, self.margin)
+        )
+
     @staticmethod
     def write_row(worksheet, invoice, element, row, fmt_error, tabname, side='left', write_errors=True):
         col = 0
@@ -1089,6 +1183,10 @@ class TrailDataRow(InvoiceRow):
     @property
     def key_full(self):
         return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
 
     @property
     def pair(self):
@@ -1211,7 +1309,6 @@ class TrailDataRow(InvoiceRow):
         sha = hashlib.sha256()
         sha.update(str(self.broker).encode(ENCODING))
         sha.update(str(self.lender).encode(ENCODING))
-        sha.update(str(self.lender).encode(ENCODING))
         sha.update(str(self.client).encode(ENCODING))
         sha.update(str(self.ref_no).encode(ENCODING))
         # sha.update(str(self.referrer).encode(ENCODING))
@@ -1226,6 +1323,27 @@ class TrailDataRow(InvoiceRow):
         sha.update(str(self.paid_to_referrer).encode(ENCODING))
         sha.update(str(self.retained).encode(ENCODING))
         return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != TrailDataRow:
+            return False
+
+        return (
+            u.sanitize(self.broker) == u.sanitize(obj.broker)
+            and u.sanitize(self.lender) == u.sanitize(obj.lender)
+            and u.sanitize(self.client) == u.sanitize(obj.client)
+            and u.sanitize(self.ref_no) == u.sanitize(obj.ref_no)
+            and self.compare_numbers(self.loan_balance, obj.loan_balance, self.margin)
+            and self.settlement_date == obj.settlement_date
+            and self.compare_numbers(self.commission, obj.commission, self.margin)
+            and self.compare_numbers(self.gst, obj.gst, self.margin)
+            and self.compare_numbers(self.commission_split, obj.commission_split, self.margin)
+            and self.compare_numbers(self.fees_gst, obj.fees_gst, self.margin)
+            and self.compare_numbers(self.remitted, obj.remitted, self.margin)
+            and self.compare_numbers(self.paid_to_broker, obj.paid_to_broker, self.margin)
+            and self.compare_numbers(self.paid_to_referrer, obj.paid_to_referrer, self.margin)
+            and self.compare_numbers(self.retained, obj.retained, self.margin)
+        )
 
     @staticmethod
     def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
@@ -1335,6 +1453,10 @@ class TaxInvoiceDataRow(InvoiceRow):
     def key_full(self):
         return self._key_full
 
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
+
     @property
     def pair(self):
         return self._pair
@@ -1411,6 +1533,18 @@ class TaxInvoiceDataRow(InvoiceRow):
         sha.update(str(self.comments).encode(ENCODING))
         return sha.hexdigest()
 
+    def equals(self, obj):
+        if type(obj) != TaxInvoiceDataRow:
+            return False
+
+        return (
+            u.sanitize(self.description) == u.sanitize(obj.description)
+            and u.sanitize(self.comments) == u.sanitize(obj.comments)
+            and self.compare_numbers(self.amount, obj.amount, self.margin)
+            and self.compare_numbers(self.gst, obj.gst, self.margin)
+            and self.compare_numbers(self.total, obj.total, self.margin)
+        )
+
     @staticmethod
     def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
         col = 0
@@ -1479,6 +1613,10 @@ class RCTIDataRow(InvoiceRow):
     def key_full(self):
         return self._key_full
 
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
+
     @property
     def pair(self):
         return self._pair
@@ -1546,6 +1684,17 @@ class RCTIDataRow(InvoiceRow):
         sha.update(str(self.gst).encode(ENCODING))
         sha.update(str(self.total).encode(ENCODING))
         return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != RCTIDataRow:
+            return False
+
+        return (
+            u.sanitize(self.description) == u.sanitize(obj.description)
+            and self.compare_numbers(self.amount, obj.amount, self.margin)
+            and self.compare_numbers(self.gst, obj.gst, self.margin)
+            and self.compare_numbers(self.total, obj.total, self.margin)
+        )
 
     @staticmethod
     def write_row(worksheet, invoice, element, row, fmt_error, tab, side='left', ignore_last_two=False, write_errors=True):

@@ -57,7 +57,6 @@ class BrokerTaxInvoice(TaxInvoice):
                 row['Commission Type'], row['Client'], row['Commission Ref ID'], row['Bank'],
                 row['Loan Balance'], row['Amount Paid'], row['GST Paid'],
                 row['Total Amount Paid'], row['Comments'], index + 2)
-            # rows[invoice_row.key_full] = invoice_row
             self.__add_datarow(invoice_row)
 
     def process_comparison(self, margin=0.000001):
@@ -110,25 +109,33 @@ class BrokerTaxInvoice(TaxInvoice):
             worksheet.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
+        keys_unmatched = set(self.pair.datarows.keys() - set(self.datarows.keys()))
+
         # Code below is just to find the errors and write them into the spreadsheets
-        for key in self.datarows.keys():
-            self_row = self.datarows[key]
-            pair_row = self.pair.datarows.get(key, None)
+        for key_full in self.datarows.keys():
+            self_row = self.datarows[key_full]
+            pair_row = self.find_pair_row(self_row)
 
             self_row.margin = margin
             self_row.pair = pair_row
 
             if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del self.pair.datarows[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
                 pair_row.margin = margin
                 pair_row.pair = self_row
                 self.summary_errors += BrokerInvoiceRow.write_row(
                     worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
+
             self.summary_errors += BrokerInvoiceRow.write_row(worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
-        alone_keys_infynity = set(self.pair.datarows.keys() - set(self.datarows.keys()))
-        for key in alone_keys_infynity:
+        for key in keys_unmatched:
             self.summary_errors += BrokerInvoiceRow.write_row(
                 worksheet, self, self.pair.datarows[key], row, fmt_error, 'right')
             row += 1
@@ -138,6 +145,26 @@ class BrokerTaxInvoice(TaxInvoice):
         else:
             del workbook
         return self.summary_errors
+
+    def find_pair_row(self, row):
+        # Match by full_key
+        pair_row = self.pair.datarows.get(row.key_full, None)
+        if pair_row is not None:
+            return pair_row
+
+        # We want to match by similarity before matching by the key
+        # Match by similarity
+        for _, item in self.pair.datarows.items():
+            if row.equals(item):
+                return item
+
+        # Match by key
+        for _, item in self.pair.datarows.items():
+            if row.key == item.key:
+                return item
+
+        # Return None if nothing found
+        return None
 
     def create_workbook(self):
         suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
@@ -154,14 +181,13 @@ class BrokerTaxInvoice(TaxInvoice):
         return sha.hexdigest()
 
     def __add_datarow(self, row):
-        if row.key in self.datarows.keys():  # If the row already exists
-            # do similarity check
-            self.datarows_count[row.key] += 1  # Increment row count for that key
-            row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
-            self.datarows[row.key] = row  # Add row to the list
+        if row.key_full in self.datarows.keys():  # If the row already exists
+            self.datarows_count[row.key_full] += 1  # Increment row count for that key_full
+            row.key_full = row._generate_key(self.datarows_count[row.key_full])  # Generate new key_full for the record
+            self.datarows[row.key_full] = row  # Add row to the list
         else:
-            self.datarows_count[row.key] = 0  # Start counter
-            self.datarows[row.key] = row  # Add row to the list
+            self.datarows_count[row.key_full] = 0  # Start counter
+            self.datarows[row.key_full] = row  # Add row to the list
 
     @property
     def equal_from(self):
@@ -214,7 +240,7 @@ class BrokerInvoiceRow(InvoiceRow):
         self.row_number = str(row_number)
 
         self._key = self._generate_key()
-        self._key_full = self.__generate_key_full()
+        self._key_full = self._generate_key_full()
 
     # region Properties
     @property
@@ -228,6 +254,10 @@ class BrokerInvoiceRow(InvoiceRow):
     @property
     def key_full(self):
         return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
 
     @property
     def pair(self):
@@ -255,25 +285,25 @@ class BrokerInvoiceRow(InvoiceRow):
     def equal_loan_balance(self):
         if self.pair is None:
             return False
-        return self.loan_balance == self.pair.loan_balance
+        return self.compare_numbers(self.loan_balance, self.pair.loan_balance, self.margin)
 
     @property
     def equal_amount_paid(self):
         if self.pair is None:
             return False
-        return self.amount_paid == self.pair.amount_paid
+        return self.compare_numbers(self.amount_paid, self.pair.amount_paid, self.margin)
 
     @property
     def equal_gst_paid(self):
         if self.pair is None:
             return False
-        return self.gst_paid == self.pair.gst_paid
+        return self.compare_numbers(self.gst_paid, self.pair.gst_paid, self.margin)
 
     @property
     def equal_total_amount_paid(self):
         if self.pair is None:
             return False
-        return self.total_amount_paid == self.pair.total_amount_paid
+        return self.compare_numbers(self.total_amount_paid, self.pair.total_amount_paid, self.margin)
 
     @property
     def equal_comments(self):
@@ -290,18 +320,34 @@ class BrokerInvoiceRow(InvoiceRow):
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
-    def __generate_key_full(self):
+    def _generate_key_full(self, salt=''):
         sha = hashlib.sha256()
         sha.update(self.commission_type.encode(ENCODING))
         sha.update(self.client.encode(ENCODING))
         sha.update(self.reference_id.encode(ENCODING))
-        sha.update(self.bank.encode(ENCODING))
+        # sha.update(self.bank.encode(ENCODING))
         sha.update(self.loan_balance.encode(ENCODING))
         sha.update(self.amount_paid.encode(ENCODING))
         sha.update(self.gst_paid.encode(ENCODING))
         sha.update(self.total_amount_paid.encode(ENCODING))
         sha.update(self.comments.encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != BrokerInvoiceRow:
+            return False
+
+        return (
+            u.sanitize(self.commission_type) == u.sanitize(obj.commission_type)
+            and u.sanitize(self.client) == u.sanitize(obj.client)
+            and u.sanitize(self.reference_id) == u.sanitize(obj.reference_id)
+            and u.sanitize(self.bank) == u.sanitize(obj.bank)
+            and self.compare_numbers(self.loan_balance, obj.loan_balance, self.margin)
+            and self.compare_numbers(self.amount_paid, obj.amount_paid, self.margin)
+            and self.compare_numbers(self.gst_paid, obj.gst_paid, self.margin)
+            and self.compare_numbers(self.total_amount_paid, obj.total_amount_paid, self.margin)
+        )
 
     @staticmethod
     def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
