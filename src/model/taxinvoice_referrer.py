@@ -2,12 +2,12 @@ import os
 import hashlib
 
 from bs4 import BeautifulSoup
-import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_REFERRER, new_error,
                                   get_header_format, get_error_format)
 
 from src import utils as u
+from src.utils import bcolors
 
 HEADER_REFERRER = ['Commission Type', 'Client', 'Referrer Name', 'Amount Paid', 'GST Paid', 'Total Amount Paid']
 
@@ -131,7 +131,7 @@ class ReferrerTaxInvoice(TaxInvoice):
             return None
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
 
-        workbook = self.create_workbook()
+        workbook = self.create_workbook(OUTPUT_DIR_REFERRER)
         fmt_table_header = get_header_format(workbook)
         fmt_error = get_error_format(workbook)
 
@@ -261,10 +261,6 @@ class ReferrerTaxInvoice(TaxInvoice):
 
         # Return None if nothing found
         return None
-
-    def create_workbook(self):
-        suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
-        return xlsxwriter.Workbook(OUTPUT_DIR_REFERRER + 'DETAILED_' + self.filename + suffix)
 
     def __add_datarow(self, row):
         if row.key in self.datarows.keys():  # If the row already exists
@@ -486,7 +482,7 @@ def read_files_referrer(dir_: str, files: list) -> dict:
     keys = {}
     counter = 1
     for file in files:
-        print(f'Parsing {counter} of {len(files)} files from {dir_}', end='\r')
+        print(f'Parsing {counter} of {len(files)} files from {bcolors.BLUE}{dir_}{bcolors.END}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:

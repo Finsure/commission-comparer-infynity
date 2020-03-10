@@ -3,11 +3,11 @@ import numpy
 import hashlib
 
 import pandas
-import xlsxwriter
 
 from src.model.taxinvoice import (TaxInvoice, InvoiceRow, ENCODING, OUTPUT_DIR_BROKER, new_error,
                                   get_header_format, get_error_format)
 from src import utils as u
+from src.utils import bcolors
 
 HEADER_BROKER = ['Commission Type', 'Client', 'Commission Ref ID', 'Bank', 'Loan Balance',
                  'Amount Paid', 'GST Paid', 'Total Amount Paid', 'Comments']
@@ -64,7 +64,7 @@ class BrokerTaxInvoice(TaxInvoice):
             return None
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
 
-        workbook = self.create_workbook()
+        workbook = self.create_workbook(OUTPUT_DIR_BROKER)
         fmt_table_header = get_header_format(workbook)
         fmt_error = get_error_format(workbook)
 
@@ -165,10 +165,6 @@ class BrokerTaxInvoice(TaxInvoice):
 
         # Return None if nothing found
         return None
-
-    def create_workbook(self):
-        suffix = '' if self.filename.endswith('.xlsx') else '.xlsx'
-        return xlsxwriter.Workbook(OUTPUT_DIR_BROKER + 'DETAILED_' + self.filename + suffix)
 
     def __generate_key(self):
         sha = hashlib.sha256()
@@ -414,7 +410,7 @@ def read_files_broker(dir_: str, files: list) -> dict:
     keys = {}
     counter = 1
     for file in files:
-        print(f'Parsing {counter} of {len(files)} files from {dir_}', end='\r')
+        print(f'Parsing {counter} of {len(files)} files from {bcolors.BLUE}{dir_}{bcolors.ENDC}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:

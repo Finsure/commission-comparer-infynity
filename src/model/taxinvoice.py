@@ -3,6 +3,8 @@ import time
 import hashlib
 import os.path
 
+import xlsxwriter
+
 ENCODING = 'utf-8'
 PID = str(calendar.timegm(time.gmtime()))
 
@@ -39,6 +41,12 @@ class TaxInvoice:
     def __fix_path(self):
         if self.directory[-1] != '/':
             self.directory += '/'
+
+    def create_workbook(self, dir_):
+        filename = self.filename
+        if filename.endswith('.xls'):
+            filename = filename[:-4]
+        return xlsxwriter.Workbook(f"{dir_}DETAILED_{filename}.xlsx")
 
 
 class InvoiceRow:
@@ -103,8 +111,8 @@ def new_error(file_a, file_b, msg, line='', value_a='', value_b='', tab=''):
 
 def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, filepath_b):
     # Write summary header
-    worksheet.write(row, col, 'File Path A: ' + filepath_a, header_fmt)
-    worksheet.write(row, col + 1, 'File Path B: ' + filepath_b, header_fmt)
+    worksheet.write(row, col, f'File Path A: {filepath_a}', header_fmt)
+    worksheet.write(row, col + 1, f'File Path B: {filepath_b}', header_fmt)
     worksheet.write(row, col + 2, 'Message', header_fmt)
     worksheet.write(row, col + 3, 'Tab', header_fmt)
     worksheet.write(row, col + 4, 'Line', header_fmt)

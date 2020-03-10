@@ -8,7 +8,7 @@ from src.model.taxinvoice import (create_dirs, new_error, write_errors, get_head
 from src.model.taxinvoice_referrer import read_files_referrer
 from src.model.taxinvoice_broker import read_files_broker
 from src.model.taxinvoice_branch import read_files_branch
-from src.utils import OKGREEN, ENDC
+from src.utils import bcolors
 
 
 # Constants
@@ -28,10 +28,7 @@ def rcti():
 # @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 # @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
-    """ A CLI for comparing the commission files between two directories """
-
-    print("Starting referrer files comparison...")
-    print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
+    print_start_message('referrer')
     loankit_files = list_files(loankit_dir)
     infynity_files = list_files(infynity_dir)
 
@@ -47,7 +44,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
         loankit_dir,
         infynity_dir)
 
-    print(OKGREEN + 'DONE' + ENDC)
+    print_done_message()
 
 
 # @click.command('compare_broker')
@@ -55,9 +52,7 @@ def rcti_compare_referrer(loose, loankit_dir, infynity_dir):
 # @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 # @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_broker(loose, loankit_dir, infynity_dir):
-    print("Starting broker files comparison...")
-    print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
-
+    print_start_message('broker')
     files_loankit = list_files(loankit_dir)
     files_infynity = list_files(infynity_dir)
 
@@ -73,7 +68,7 @@ def rcti_compare_broker(loose, loankit_dir, infynity_dir):
         loankit_dir,
         infynity_dir)
 
-    print(OKGREEN + 'DONE' + ENDC)
+    print_done_message()
 
 
 # @click.command('compare_branch')
@@ -81,9 +76,7 @@ def rcti_compare_broker(loose, loankit_dir, infynity_dir):
 # @click.argument('loankit_dir', required=True, type=click.Path(exists=True))
 # @click.argument('infynity_dir', required=True, type=click.Path(exists=True))
 def rcti_compare_branch(loose, loankit_dir, infynity_dir):
-    print("Starting branch files comparison...")
-    print('This Process ID (PID) is: ' + OKGREEN + PID + ENDC)
-
+    print_start_message('branch')
     files_loankit = list_files(loankit_dir)
     files_infynity = list_files(infynity_dir)
 
@@ -99,7 +92,7 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
         loankit_dir,
         infynity_dir)
 
-    print(OKGREEN + 'DONE' + ENDC)
+    print_done_message()
 
 
 def run_comparison(files_a, files_b, margin, summary_filname, summary_title, filepath_a, filepath_b):
@@ -135,14 +128,15 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title, fil
     print()
 
     # Create summary based on errors
-    workbook = xlsxwriter.Workbook(OUTPUT_DIR_SUMMARY + summary_filname + '.xlsx')
+    file = f"{OUTPUT_DIR_SUMMARY}{summary_filname}.xlsx"
+    workbook = xlsxwriter.Workbook(file)
     worksheet = workbook.add_worksheet('Summary')
     fmt_title = get_title_format(workbook)
     fmt_table_header = get_header_format(workbook)
     worksheet.merge_range('A1:I1', summary_title, fmt_title)
     row = 1
     col = 0
-    worksheet.write(row, col, 'Number of issues: ' + str(len(summary_errors)))
+    worksheet.write(row, col, f"Number of issues: {str(len(summary_errors))}")
     row += 2
     worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header, filepath_a, filepath_b)
     workbook.close()
@@ -152,6 +146,14 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title, fil
 # rcti.add_command(rcti_compare_referrer)
 # rcti.add_command(rcti_compare_broker)
 # rcti.add_command(rcti_compare_branch)
+
+def print_start_message(type: str):
+    print(f"{bcolors.BOLD}Starting {type} files comparison...{bcolors.ENDC}")
+    print(f"This Process ID (PID) is: {bcolors.GREEN}{PID}{bcolors.ENDC}")
+
+
+def print_done_message():
+    print(f"{bcolors.GREEN}DONE{bcolors.ENDC}")
 
 
 def list_files(dir_: str) -> list:
@@ -165,18 +167,19 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    rcti_compare_referrer(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    # rcti_compare_referrer(
+    #     0.0,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
     rcti_compare_broker(
-        0.5,
+        0.0,
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    rcti_compare_branch(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    # rcti_compare_branch(
+    #     0.0,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    pass
 
 # SIMULATE REFERRER
 # python cli.py compare_referrer -l 0 "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/" "/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/"
