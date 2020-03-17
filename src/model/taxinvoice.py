@@ -4,6 +4,7 @@ import hashlib
 import os.path
 
 import xlsxwriter
+from src.utils import money_to_float
 
 ENCODING = 'utf-8'
 PID = str(calendar.timegm(time.gmtime()))
@@ -55,17 +56,17 @@ class InvoiceRow:
         pass
 
     def compare_numbers(self, n1, n2, margin):
-        n1val = n1
-        n2val = n2
+        n1val = str(n1)
+        n2val = str(n2)
 
-        if str(n1).startswith('$'):
-            n1val = float(n1[-1:])  # remove $
-        if str(n2).startswith('$'):
-            n2val = float(n2[-1:])  # remove $
+        # if str(n1).startswith('$'):
+        #     n1val = float(n1[-1:])  # remove $
+        # if str(n2).startswith('$'):
+        #     n2val = float(n2[-1:])  # remove $
 
         try:
-            n1val = float(n1val)
-            n2val = float(n2val)
+            n1val = money_to_float(n1val)
+            n2val = money_to_float(n2val)
         except ValueError:
             if n1val == '' or n2val == '':
                 return n1val == n2val

@@ -82,17 +82,18 @@ class ReferrerTaxInvoice(TaxInvoice):
 
     def parse_rows(self, soup: BeautifulSoup):
         header = soup.find('tr')  # Find header
-        header.extract()  # Remove header
+        header = header.extract()  # Remove header
+        header = header.find_all('th')
         table_rows = soup.find_all('tr')
         row_number = 0
         for tr in table_rows:
             row_number += 1
             tds = tr.find_all('td')
-            try:
+            if len(header) == 6:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, tds[2].text,
                                          tds[3].text, tds[4].text, tds[5].text, row_number)
                 self.__add_datarow(row)
-            except IndexError:
+            else:
                 row = ReferrerInvoiceRow(tds[0].text, tds[1].text, '',
                                          tds[2].text, tds[3].text, tds[4].text, row_number)
                 self.__add_datarow(row)
@@ -263,13 +264,13 @@ class ReferrerTaxInvoice(TaxInvoice):
         return None
 
     def __add_datarow(self, row):
-        if row.key in self.datarows.keys():  # If the row already exists
-            self.datarows_count[row.key] += 1  # Increment row count for that key
-            row.key = row._generate_key(self.datarows_count[row.key])  # Generate new key for the record
-            self.datarows[row.key] = row  # Add row to the list
+        if row.key_full in self.datarows.keys():  # If the row already exists
+            self.datarows_count[row.key_full] += 1  # Increment row count for that key
+            row.key_full = row._generate_key(self.datarows_count[row.key_full])  # Generate new key for the record
+            self.datarows[row.key_full] = row  # Add row to the list
         else:
-            self.datarows_count[row.key] = 0  # Start counter
-            self.datarows[row.key] = row  # Add row to the list
+            self.datarows_count[row.key_full] = 0  # Start counter
+            self.datarows[row.key_full] = row  # Add row to the list
 
     # region Properties
     @property
@@ -390,19 +391,19 @@ class ReferrerInvoiceRow(InvoiceRow):
     def equal_amount_paid(self):
         if self.pair is None:
             return False
-        return self.amount_paid == self.pair.amount_paid
+        return self.compare_numbers(self.amount_paid, self.pair.amount_paid, self.margin)
 
     @property
     def equal_gst_paid(self):
         if self.pair is None:
             return False
-        return self.gst_paid == self.pair.gst_paid
+        return self.compare_numbers(self.gst_paid, self.pair.gst_paid, self.margin)
 
     @property
     def equal_total(self):
         if self.pair is None:
             return False
-        return self.total == self.pair.total
+        return self.compare_numbers(self.total, self.pair.total, self.margin)
     # endregion Properties
 
     def _generate_key(self, salt=''):
@@ -482,7 +483,7 @@ def read_files_referrer(dir_: str, files: list) -> dict:
     keys = {}
     counter = 1
     for file in files:
-        print(f'Parsing {counter} of {len(files)} files from {bcolors.BLUE}{dir_}{bcolors.END}', end='\r')
+        print(f'Parsing {counter} of {len(files)} files from {bcolors.BLUE}{dir_}{bcolors.ENDC}', end='\r')
         if os.path.isdir(dir_ + file):
             continue
         try:

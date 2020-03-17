@@ -12,6 +12,13 @@ def merge_lists(l1: list, l2: list) -> list:
     return list(l1) + difference
 
 
+def money_to_float(value: str):
+    new_value = value
+    new_value = new_value.replace('$', '')
+    new_value = new_value.replace(',', '')
+    return float(new_value)
+
+
 class safelist(list):
     def get(self, index, default=None):
         try:
