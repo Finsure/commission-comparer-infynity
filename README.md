@@ -18,4 +18,4 @@ NOTE: Make sure you generate the binary in the same **operating system** it is g
        Don't forget to make it an executable by running `chmod +x [name_of_file]`.
 1. Now try running `python cli.py --help` to have a list of commands.
 
-> DEV NOTES: It may not work because the path to the generated files is pointing to inside the project.
+> DEV NOTES: It will not work because the path to the generated files is pointing to inside the project at the moment.
