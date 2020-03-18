@@ -114,9 +114,9 @@ class BrokerTaxInvoice(TaxInvoice):
         # Code below is just to find the errors and write them into the spreadsheets
         for key_full in self.datarows.keys():
             self_row = self.datarows[key_full]
-            pair_row = self.find_pair_row(self_row)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row)
             self_row.pair = pair_row
 
             if pair_row is not None:

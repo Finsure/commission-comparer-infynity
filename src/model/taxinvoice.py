@@ -4,7 +4,7 @@ import hashlib
 import os.path
 
 import xlsxwriter
-from src.utils import money_to_float
+from src import utils as u
 
 ENCODING = 'utf-8'
 PID = str(calendar.timegm(time.gmtime()))
@@ -49,6 +49,9 @@ class TaxInvoice:
             filename = filename[:-4]
         return xlsxwriter.Workbook(f"{dir_}DETAILED_{filename}.xlsx")
 
+    def compare_numbers(self, n1, n2, margin):
+        return u.compare_numbers(n1, n2, margin)
+
 
 class InvoiceRow:
 
@@ -56,23 +59,7 @@ class InvoiceRow:
         pass
 
     def compare_numbers(self, n1, n2, margin):
-        n1val = str(n1)
-        n2val = str(n2)
-
-        # if str(n1).startswith('$'):
-        #     n1val = float(n1[-1:])  # remove $
-        # if str(n2).startswith('$'):
-        #     n2val = float(n2[-1:])  # remove $
-
-        try:
-            n1val = money_to_float(n1val)
-            n2val = money_to_float(n2val)
-        except ValueError:
-            if n1val == '' or n2val == '':
-                return n1val == n2val
-            return False
-
-        return abs(n1val - n2val) <= margin + 0.000001
+        return u.compare_numbers(n1, n2, margin)
 
     def serialize(self):
         return self.__dict__

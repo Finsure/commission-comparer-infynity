@@ -19,6 +19,21 @@ def money_to_float(value: str):
     return float(new_value)
 
 
+def compare_numbers(n1, n2, margin):
+    n1val = str(n1)
+    n2val = str(n2)
+
+    try:
+        n1val = money_to_float(n1val)
+        n2val = money_to_float(n2val)
+    except ValueError:
+        if n1val == '' or n2val == '':
+            return n1val == n2val
+        return False
+
+    return abs(n1val - n2val) <= margin + 0.000001
+
+
 class safelist(list):
     def get(self, index, default=None):
         try:

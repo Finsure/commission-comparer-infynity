@@ -377,9 +377,9 @@ class BranchTaxInvoice(TaxInvoice):
 
             for key in section.keys():
                 self_row = section[key]
-                pair_row = self.find_pair_row(self_row, sections_pairs[sec_index])
-
                 self_row.margin = margin
+
+                pair_row = self.find_pair_row(self_row, sections_pairs[sec_index])
                 self_row.pair = pair_row
 
                 if pair_row is not None:
@@ -471,9 +471,9 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key in self.rcti_data_rows.keys():
             self_row = self.rcti_data_rows[key]
-            pair_row = self.find_pair_row(self_row, self.pair.rcti_data_rows)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row, self.pair.rcti_data_rows)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -562,9 +562,9 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key_full in self.tax_invoice_data_rows_a.keys():
             self_row = self.tax_invoice_data_rows_a[key_full]
-            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_a)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_a)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -598,9 +598,9 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key_full in self.tax_invoice_data_rows_b.keys():
             self_row = self.tax_invoice_data_rows_b[key_full]
-            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_b)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row, self.pair.tax_invoice_data_rows_b)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -641,9 +641,9 @@ class BranchTaxInvoice(TaxInvoice):
         # Code below is just to find the errors and write them into the spreadsheets
         for key_full in self.upfront_data_rows.keys():
             self_row = self.upfront_data_rows[key_full]
-            pair_row = self.find_pair_row(self_row, self.pair.upfront_data_rows)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row, self.pair.upfront_data_rows)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -685,9 +685,9 @@ class BranchTaxInvoice(TaxInvoice):
         # Code below is just to find the errors and write them into the spreadsheets
         for key_full in self.trail_data_rows.keys():
             self_row = self.trail_data_rows[key_full]
-            pair_row = self.find_pair_row(self_row, self.pair.trail_data_rows)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row, self.pair.trail_data_rows)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -729,9 +729,9 @@ class BranchTaxInvoice(TaxInvoice):
         # Code below is just to find the errors and write them into the spreadsheets
         for key_full in self.vbi_data_rows.keys():
             self_row = self.vbi_data_rows[key_full]
-            pair_row = self.pair.vbi_data_rows.get(key, None)
-
             self_row.margin = margin
+
+            pair_row = self.pair.vbi_data_rows.get(key, None)
             self_row.pair = pair_row
 
             if pair_row is not None:

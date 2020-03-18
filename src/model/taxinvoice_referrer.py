@@ -21,6 +21,7 @@ class ReferrerTaxInvoice(TaxInvoice):
         self.datarows = {}
         self.datarows_count = {}
         self.summary_errors = []
+        self.margin = 0
         self._key = self.__generate_key()
         self.parse()
 
@@ -131,6 +132,8 @@ class ReferrerTaxInvoice(TaxInvoice):
         if self.pair is None:
             return None
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
+        self.margin = margin
+        self.pair.margin = margin
 
         workbook = self.create_workbook(OUTPUT_DIR_REFERRER)
         fmt_table_header = get_header_format(workbook)
@@ -171,33 +174,33 @@ class ReferrerTaxInvoice(TaxInvoice):
 
         if self.pair is not None:
             row = 0
-            format_ = fmt_error if not self.equal_from else None
+            format_ = fmt_error if not self.pair.equal_from else None
             worksheet.write(row, col_b, 'From')
-            worksheet.write(row, col_b + 1, self._from, format_)
+            worksheet.write(row, col_b + 1, self.pair._from, format_)
             row += 1
-            format_ = fmt_error if not self.equal_from_abn else None
+            format_ = fmt_error if not self.pair.equal_from_abn else None
             worksheet.write(row, col_b, 'From ABN')
-            worksheet.write(row, col_b + 1, self.from_abn, format_)
+            worksheet.write(row, col_b + 1, self.pair.from_abn, format_)
             row += 1
-            format_ = fmt_error if not self.equal_to else None
+            format_ = fmt_error if not self.pair.equal_to else None
             worksheet.write(row, col_b, 'To')
-            worksheet.write(row, col_b + 1, self.to, format_)
+            worksheet.write(row, col_b + 1, self.pair.to, format_)
             row += 1
-            format_ = fmt_error if not self.equal_to_abn else None
+            format_ = fmt_error if not self.pair.equal_to_abn else None
             worksheet.write(row, col_b, 'To ABN')
-            worksheet.write(row, col_b + 1, self.to_abn, format_)
+            worksheet.write(row, col_b + 1, self.pair.to_abn, format_)
             row += 1
-            format_ = fmt_error if not self.equal_bsb else None
+            format_ = fmt_error if not self.pair.equal_bsb else None
             worksheet.write(row, col_b, 'BSB')
-            worksheet.write(row, col_b + 1, self.bsb, format_)
+            worksheet.write(row, col_b + 1, self.pair.bsb, format_)
             row += 1
-            format_ = fmt_error if not self.equal_account else None
+            format_ = fmt_error if not self.pair.equal_account else None
             worksheet.write(row, col_b, 'Account')
-            worksheet.write(row, col_b + 1, self.account, format_)
+            worksheet.write(row, col_b + 1, self.pair.account, format_)
             row += 1
-            format_ = fmt_error if not self.equal_final_total else None
+            format_ = fmt_error if not self.pair.equal_final_total else None
             worksheet.write(row, col_b, 'Total')
-            worksheet.write(row, col_b + 1, self.final_total, format_)
+            worksheet.write(row, col_b + 1, self.pair.final_total, format_)
 
         row += 2
 
@@ -211,9 +214,9 @@ class ReferrerTaxInvoice(TaxInvoice):
         # Code below is just to find the errors and write them into the spreadsheets
         for key_full in self.datarows.keys():
             self_row = self.datarows[key_full]
-            pair_row = self.find_pair_row(self_row)
-
             self_row.margin = margin
+
+            pair_row = self.find_pair_row(self_row)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -251,12 +254,12 @@ class ReferrerTaxInvoice(TaxInvoice):
 
         # We want to match by similarity before matching by the key
         # Match by similarity
-        for key, item in self.pair.datarows.items():
+        for _, item in self.pair.datarows.items():
             if row.equals(item):
                 return item
 
         # Match by key
-        for key, item in self.pair.datarows.items():
+        for _, item in self.pair.datarows.items():
             if row.key == item.key:
                 return item
 
@@ -313,7 +316,7 @@ class ReferrerTaxInvoice(TaxInvoice):
     def equal_final_total(self):
         if self.pair is None:
             return False
-        return self.final_total == self.pair.final_total
+        return self.compare_numbers(self.final_total, self.pair.final_total, self.margin)
     # endregion
 
 
