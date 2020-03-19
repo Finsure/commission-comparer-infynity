@@ -282,7 +282,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         # Now we have each df's dataframe
         df1 = df[df1_start:df1_end]
-        de2 = df[df2_start:df2_end]
+        df2 = df[df2_start:df2_end]
         df3 = df[df3_start:df3_end]
         df4 = df[df4_start:df4_end]
         df5 = df[df5_start:df5_end]
@@ -294,7 +294,7 @@ class BranchTaxInvoice(TaxInvoice):
             self.__add_datarow(self.summary_summary, self.summary_summary_count, summaryrow)
 
         if df2_start is not None:
-            for index, row in de2.iterrows():
+            for index, row in df2.iterrows():
                 summaryrow = RCTIDataRow(row[0], row[1], row[2], row[3], index)
                 self.__add_datarow(self.summary_ptbff, self.summary_ptbff_count, summaryrow)
 
@@ -356,10 +356,10 @@ class BranchTaxInvoice(TaxInvoice):
 
             if not self.equal_summary_from:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'From does not match', '', self.summary_from, self.pair.summary_from, tab=TAB_SUMMARY))
+                    self.filename, self.pair.filename, 'From does not match', '', '', self.summary_from, self.pair.summary_from, tab=TAB_SUMMARY))
             if not self.equal_summary_to:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'To does not match', '', self.summary_to, self.pair.summary_to, tab=TAB_SUMMARY))
+                    self.filename, self.pair.filename, 'To does not match', '', '', self.summary_to, self.pair.summary_to, tab=TAB_SUMMARY))
             row += 1
 
         sections = [self.summary_summary, self.summary_ptbff, self.summary_mobbtb, self.summary_ptrff, self.summary_mobrtb]
@@ -400,7 +400,7 @@ class BranchTaxInvoice(TaxInvoice):
 
             for key in keys_unmatched:
                 self.summary_errors += RCTIDataRow.write_row(
-                    worksheet_summary, self, sections_pairs[sec_index][key], row, fmt_error, TAB_SUMMARY, 'right', ignore_last_two)
+                    worksheet_summary, self, sections_pairs[sec_index][key], row, fmt_error, TAB_SUMMARY, 'right', ignore_last_two, write_errors=False)
                 row += 1
 
             use_header = HEADER_SUMMARY_SHORTENED
@@ -449,16 +449,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if not self.equal_rcti_from:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'From does not match', '', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
+                    self.filename, self.pair.filename, 'From does not match', '', '', self.rcti_from, self.pair.rcti_from, tab=TAB_RCTI))
             if not self.equal_rcti_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'From ABN does not match', '', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
+                    self.filename, self.pair.filename, 'From ABN does not match', '', '', self.rcti_from_abn, self.pair.rcti_from_abn, tab=TAB_RCTI))
             if not self.equal_rcti_to:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'To does not match', '', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
+                    self.filename, self.pair.filename, 'To does not match', '', '', self.rcti_to, self.pair.rcti_to, tab=TAB_RCTI))
             if not self.equal_rcti_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'To ABN does not match', '', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
+                    self.filename, self.pair.filename, 'To ABN does not match', '', '', self.rcti_to_abn, self.pair.rcti_to_abn, tab=TAB_RCTI))
 
         row += 2
 
@@ -493,7 +493,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key in keys_unmatched:
             self.summary_errors += RCTIDataRow.write_row(
-                worksheet_rcti, self, self.pair.rcti_data_rows[key], row, fmt_error, TAB_RCTI, 'right')
+                worksheet_rcti, self, self.pair.rcti_data_rows[key], row, fmt_error, TAB_RCTI, 'right', write_errors=False)
             row += 1
         # endregion
 
@@ -539,16 +539,16 @@ class BranchTaxInvoice(TaxInvoice):
 
             if not self.equal_tax_invoice_from:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'From does not match', '', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
+                    self.filename, self.pair.filename, 'From does not match', '', '', self.tax_invoice_from, self.pair.tax_invoice_from, tab=TAB_TAX_INVOICE))
             if not self.equal_tax_invoice_from_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'From ABN does not match', '', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
+                    self.filename, self.pair.filename, 'From ABN does not match', '', '', self.tax_invoice_from_abn, self.pair.tax_invoice_from_abn, tab=TAB_TAX_INVOICE))
             if not self.equal_tax_invoice_to:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'To does not match', '', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
+                    self.filename, self.pair.filename, 'To does not match', '', '', self.tax_invoice_to, self.pair.tax_invoice_to, tab=TAB_TAX_INVOICE))
             if not self.equal_tax_invoice_to_abn:
                 self.summary_errors.append(new_error(
-                    self.filename, self.pair.filename, 'To ABN does not match', '', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
+                    self.filename, self.pair.filename, 'To ABN does not match', '', '', self.tax_invoice_to_abn, self.pair.tax_invoice_to_abn, tab=TAB_TAX_INVOICE))
 
         row += 2
 
@@ -584,7 +584,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key in keys_unmatched:
             self.summary_errors += TaxInvoiceDataRow.write_row(
-                worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_a[key], row, fmt_error, 'right')
+                worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_a[key], row, fmt_error, 'right', write_errors=False)
             row += 1
         row += 2
 
@@ -620,7 +620,7 @@ class BranchTaxInvoice(TaxInvoice):
 
         for key in keys_unmatched:
             self.summary_errors += TaxInvoiceDataRow.write_row(
-                worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_b[key], row, fmt_error, 'right')
+                worksheet_tax_invoice, self, self.pair.tax_invoice_data_rows_b[key], row, fmt_error, 'right', write_errors=False)
             row += 1
         # endregion
 
@@ -664,7 +664,7 @@ class BranchTaxInvoice(TaxInvoice):
         # Write unmatched records
         for key in keys_unmatched:
             self.summary_errors += VBIDataRow.write_row(
-                worksheet_upfront, self, self.pair.upfront_data_rows[key], row, fmt_error, TAB_UPFRONT_DATA, 'right')
+                worksheet_upfront, self, self.pair.upfront_data_rows[key], row, fmt_error, TAB_UPFRONT_DATA, 'right', write_errors=False)
             row += 1
         # endregion
 
@@ -708,7 +708,7 @@ class BranchTaxInvoice(TaxInvoice):
         # Write unmatched records
         for key in keys_unmatched:
             self.summary_errors += TrailDataRow.write_row(
-                worksheet_trail, self, self.pair.trail_data_rows[key], row, fmt_error, 'right')
+                worksheet_trail, self, self.pair.trail_data_rows[key], row, fmt_error, 'right', write_errors=False)
             row += 1
         # endregion
 
@@ -752,7 +752,7 @@ class BranchTaxInvoice(TaxInvoice):
         # Write unmatched records
         for key in keys_unmatched:
             self.summary_errors += VBIDataRow.write_row(
-                worksheet_vbi, self, self.pair.vbi_data_rows[key], row, fmt_error, TAB_VBI_DATA, 'right')
+                worksheet_vbi, self, self.pair.vbi_data_rows[key], row, fmt_error, TAB_VBI_DATA, 'right', write_errors=False)
             row += 1
         # endregion
 
@@ -996,22 +996,6 @@ class VBIDataRow(InvoiceRow):
         if self.pair is None:
             return False
         return self.compare_numbers(self.retained, self.pair.retained, self.margin)
-
-    @property
-    def equal_all(self):
-        return (
-            self.equal_referrer()
-            and self.equal_settled_loan()
-            and self.equal_settlement_date()
-            and self.equal_commission()
-            and self.equal_gst()
-            and self.equal_commission_split()
-            and self.equal_fees_gst()
-            and self.equal_remitted()
-            and self.equal_paid_to_broker()
-            and self.equal_paid_to_referrer()
-            and self.equal_retained()
-        )
     # endregion
 
     def _generate_key(self, salt=''):
@@ -1098,41 +1082,46 @@ class VBIDataRow(InvoiceRow):
         worksheet.write(row, col + 13, element.retained, format_)
 
         errors = []
-        line = element.document_row
+        line_a = element.document_row
+        description = f"Reference number: {element.ref_no}"
         if element.pair is not None:
+            line_b = element.pair.document_row
             if write_errors:
                 if not element.equal_settled_loan:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Settled Loan does not match', line, element.settled_loan, element.pair.settled_loan, tab=tabname))
+                        invoice.filename, invoice.pair.filename, 'Settled Loan does not match', line_a, line_b, element.settled_loan, element.pair.settled_loan, tab=tabname))
                 if not element.equal_settlement_date:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Settlement Date does not match', line, element.settlement_date, element.pair.settlement_date, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Settlement Date does not match', line_a, line_b, element.settlement_date, element.pair.settlement_date, tab=tabname))
                 if not element.equal_commission:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Commission does not match', line, element.commission, element.pair.commission, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Commission does not match', line_a, line_b, element.commission, element.pair.commission, tab=tabname))
                 if not element.equal_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'GST does not match', line, element.gst, element.pair.gst, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'GST does not match', line_a, line_b, element.gst, element.pair.gst, tab=tabname))
                 if not element.equal_commission_split:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Commission Split does not match', line, element.commission_split, element.pair.commission_split, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Commission Split does not match', line_a, line_b, element.commission_split, element.pair.commission_split, tab=tabname))
                 if not element.equal_fees_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Fees GST does not match', line, element.fees_gst, element.pair.fees_gst, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Fees GST does not match', line_a, line_b, element.fees_gst, element.pair.fees_gst, tab=tabname))
                 if not element.equal_remitted:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Remitted does not match', line, element.remitted, element.pair.remitted, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Remitted does not match', line_a, line_b, element.remitted, element.pair.remitted, tab=tabname))
                 if not element.equal_paid_to_broker:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Paid to Broker does not match', line, element.paid_to_broker, element.pair.paid_to_broker, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Paid to Broker does not match', line_a, line_b, element.paid_to_broker, element.pair.paid_to_broker, tab=tabname))
                 if not element.equal_paid_to_referrer:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Paid to Referrer does not match', line, element.paid_to_referrer, element.pair.paid_to_referrer, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Paid to Referrer does not match', line_a, line_b, element.paid_to_referrer, element.pair.paid_to_referrer, tab=tabname))
                 if not element.equal_retained:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Retained does not match', line, element.retained, element.pair.retained, tab=tabname))
+                        invoice.filename, invoice.pair.filename,  'Retained does not match', line_a, line_b, element.retained, element.pair.retained, tab=tabname))
         else:
-            errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line, tab=tabname))
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description, tab=tabname))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description, tab=tabname))
 
         return errors
 
@@ -1275,22 +1264,6 @@ class TrailDataRow(InvoiceRow):
         if self.pair is None:
             return False
         return self.compare_numbers(self.retained, self.pair.retained, self.margin)
-
-    @property
-    def equal_all(self):
-        return (
-            self.equal_referrer()
-            and self.equal_loan_balance()
-            and self.equal_settlement_date()
-            and self.equal_commission()
-            and self.equal_gst()
-            and self.equal_commission_split()
-            and self.equal_fees_gst()
-            and self.equal_remitted()
-            and self.equal_paid_to_broker()
-            and self.equal_paid_to_referrer()
-            and self.equal_retained()
-        )
     # endregion
 
     def _generate_key(self, salt=''):
@@ -1376,44 +1349,49 @@ class TrailDataRow(InvoiceRow):
         worksheet.write(row, col + 13, element.retained, format_)
 
         errors = []
-        line = element.document_row
+        line_a = element.document_row
+        description = f"Referece number: {element.ref_no}"
         if element.pair is not None:
+            line_b = element.pair.document_row
             if write_errors:
                 if not element.equal_lender:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename,  'Lender does not match', line, element.lender, element.pair.lender, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename,  'Lender does not match', line_a, line_b, element.lender, element.pair.lender, tab=TAB_TRAIL_DATA))
                 if not element.equal_loan_balance:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Loan Balance does not match', line, element.loan_balance, element.pair.loan_balance, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Loan Balance does not match', line_a, line_b, element.loan_balance, element.pair.loan_balance, tab=TAB_TRAIL_DATA))
                 if not element.equal_settlement_date:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Settlement Date does not match', line, element.settlement_date, element.pair.settlement_date, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Settlement Date does not match', line_a, line_b, element.settlement_date, element.pair.settlement_date, tab=TAB_TRAIL_DATA))
                 if not element.equal_commission:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Commission does not match', line, element.commission, element.pair.commission, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Commission does not match', line_a, line_b, element.commission, element.pair.commission, tab=TAB_TRAIL_DATA))
                 if not element.equal_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'GST does not match', line, element.gst, element.pair.gst, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'GST does not match', line_a, line_b, element.gst, element.pair.gst, tab=TAB_TRAIL_DATA))
                 if not element.equal_commission_split:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Commission Split does not match', line, element.commission_split, element.pair.commission_split, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Commission Split does not match', line_a, line_b, element.commission_split, element.pair.commission_split, tab=TAB_TRAIL_DATA))
                 if not element.equal_fees_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Fees GST does not match', line, element.fees_gst, element.pair.fees_gst, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Fees GST does not match', line_a, line_b, element.fees_gst, element.pair.fees_gst, tab=TAB_TRAIL_DATA))
                 if not element.equal_remitted:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Remitted does not match', line, element.remitted, element.pair.remitted, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Remitted does not match', line_a, line_b, element.remitted, element.pair.remitted, tab=TAB_TRAIL_DATA))
                 if not element.equal_paid_to_broker:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Paid to Broker does not match', line, element.paid_to_broker, element.pair.paid_to_broker, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Paid to Broker does not match', line_a, line_b, element.paid_to_broker, element.pair.paid_to_broker, tab=TAB_TRAIL_DATA))
                 if not element.equal_paid_to_referrer:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Paid to Referrer does not match', line, element.paid_to_referrer, element.pair.paid_to_referrer, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Paid to Referrer does not match', line_a, line_b, element.paid_to_referrer, element.pair.paid_to_referrer, tab=TAB_TRAIL_DATA))
                 if not element.equal_retained:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Retained does not match', line, element.retained, element.pair.retained, tab=TAB_TRAIL_DATA))
+                        invoice.filename, invoice.pair.filename, 'Retained does not match', line_a, line_b, element.retained, element.pair.retained, tab=TAB_TRAIL_DATA))
         else:
-            errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line, tab=TAB_TRAIL_DATA))
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description, tab=TAB_TRAIL_DATA))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description, tab=TAB_TRAIL_DATA))
 
         return errors
 
@@ -1502,16 +1480,6 @@ class TaxInvoiceDataRow(InvoiceRow):
         if self.pair is None:
             return False
         return u.sanitize(self.comments) == u.sanitize(self.pair.comments)
-
-    @property
-    def equal_all(self):
-        return (
-            self.equal_description()
-            and self.equal_amount()
-            and self.equal_gst()
-            and self.equal_total()
-            and self.equal_comments()
-        )
     # endregion
 
     def _generate_key(self, salt=''):
@@ -1558,23 +1526,28 @@ class TaxInvoiceDataRow(InvoiceRow):
         worksheet.write(row, col + 4, element.comments, format_)
 
         errors = []
-        line = element.document_row
+        line_a = element.document_row
+        description = element.description
         if element.pair is not None:
+            line_b = element.pair.document_row
             if write_errors:
                 if not element.equal_amount:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Amount does not match', line, element.amount, element.pair.amount, tab=TAB_TAX_INVOICE))
+                        invoice.filename, invoice.pair.filename, 'Amount does not match', line_a, line_b, element.amount, element.pair.amount, tab=TAB_TAX_INVOICE))
                 if not element.equal_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'GST does not match', line, element.gst, element.pair.gst, tab=TAB_TAX_INVOICE))
+                        invoice.filename, invoice.pair.filename, 'GST does not match', line_a, line_b, element.gst, element.pair.gst, tab=TAB_TAX_INVOICE))
                 if not element.equal_total:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Total does not match', line, element.total, element.pair.total, tab=TAB_TAX_INVOICE))
+                        invoice.filename, invoice.pair.filename, 'Total does not match', line_a, line_b, element.total, element.pair.total, tab=TAB_TAX_INVOICE))
                 if not element.equal_comments:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Comments does not match', line, element.comments, element.pair.comments, tab=TAB_TAX_INVOICE))
+                        invoice.filename, invoice.pair.filename, 'Comments does not match', line_a, line_b, element.comments, element.pair.comments, tab=TAB_TAX_INVOICE))
         else:
-            errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line, tab=TAB_TAX_INVOICE))
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description, tab=TAB_TAX_INVOICE))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description, tab=TAB_TAX_INVOICE))
 
         return errors
 
@@ -1656,15 +1629,6 @@ class RCTIDataRow(InvoiceRow):
         if self.pair is None:
             return False
         return self.compare_numbers(self.total, self.pair.total, self.margin)
-
-    @property
-    def equal_all(self):
-        return (
-            self.equal_description()
-            and self.equal_amount()
-            and self.equal_gst()
-            and self.equal_total()
-        )
     # endregion
 
     def _generate_key(self, salt=''):
@@ -1709,20 +1673,25 @@ class RCTIDataRow(InvoiceRow):
             worksheet.write(row, col + 3, element.total, format_)
 
         errors = []
-        line = element.document_row
+        line_a = element.document_row
+        description = element.description
         if element.pair is not None:
+            line_b = element.pair.document_row
             if write_errors:
                 if not element.equal_amount:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Amount does not match', line, element.amount, element.pair.amount, tab=tab))
+                        invoice.filename, invoice.pair.filename, 'Amount does not match', line_a, line_b, element.amount, element.pair.amount, tab=tab))
                 if not element.equal_gst:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'GST does not match', line, element.gst, element.pair.gst, tab=tab))
+                        invoice.filename, invoice.pair.filename, 'GST does not match', line_a, line_b, element.gst, element.pair.gst, tab=tab))
                 if not element.equal_total:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Total does not match', line, element.total, element.pair.total, tab=tab))
+                        invoice.filename, invoice.pair.filename, 'Total does not match', line_a, line_b, element.total, element.pair.total, tab=tab))
         else:
-            errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line, tab=tab))
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description, tab=tab))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description, tab=tab))
 
         return errors
 

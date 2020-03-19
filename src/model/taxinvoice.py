@@ -85,13 +85,14 @@ def create_dirs():
         os.mkdir(OUTPUT_DIR_SUMMARY)
 
 
-def new_error(file_a, file_b, msg, line='', value_a='', value_b='', tab=''):
+def new_error(file_a, file_b, msg, line_a='', line_b='', value_a='', value_b='', tab=''):
     return {
         'file_a': file_a,
         'file_b': file_b,
         'tab': tab,
         'msg': msg,
-        'line': line,
+        'line_a': line_a,
+        'line_b': line_b,
         'value_a': value_a,
         'value_b': value_b,
     }
@@ -103,9 +104,10 @@ def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, file
     worksheet.write(row, col + 1, f'File Path B: {filepath_b}', header_fmt)
     worksheet.write(row, col + 2, 'Message', header_fmt)
     worksheet.write(row, col + 3, 'Tab', header_fmt)
-    worksheet.write(row, col + 4, 'Line', header_fmt)
-    worksheet.write(row, col + 5, 'A Value', header_fmt)
-    worksheet.write(row, col + 6, 'B Value', header_fmt)
+    worksheet.write(row, col + 4, 'Line A', header_fmt)
+    worksheet.write(row, col + 5, 'Line B', header_fmt)
+    worksheet.write(row, col + 6, 'Value A', header_fmt)
+    worksheet.write(row, col + 7, 'Value B', header_fmt)
     row += 1
 
     # Write errors
@@ -114,9 +116,10 @@ def write_errors(errors: list, worksheet, row, col, header_fmt, filepath_a, file
         worksheet.write(row, col + 1, error['file_b'])
         worksheet.write(row, col + 2, error['msg'])
         worksheet.write(row, col + 3, error['tab'])
-        worksheet.write(row, col + 4, error['line'])
-        worksheet.write(row, col + 5, error['value_a'])
-        worksheet.write(row, col + 6, error['value_b'])
+        worksheet.write(row, col + 4, error['line_a'])
+        worksheet.write(row, col + 5, error['line_b'])
+        worksheet.write(row, col + 6, error['value_a'])
+        worksheet.write(row, col + 7, error['value_b'])
         row += 1
 
     return worksheet

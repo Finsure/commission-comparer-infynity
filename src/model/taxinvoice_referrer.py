@@ -202,6 +202,28 @@ class ReferrerTaxInvoice(TaxInvoice):
             worksheet.write(row, col_b, 'Total')
             worksheet.write(row, col_b + 1, self.pair.final_total, format_)
 
+            if not self.equal_from:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'From does not match', '', '', self._from, self.pair._from))
+            if not self.equal_from_abn:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'From ABN does not match', '', '', self.from_abn, self.pair.from_abn))
+            if not self.equal_to:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'To does not match', '', '', self.to, self.pair.to))
+            if not self.equal_to_abn:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'To ABN does not match', '', '', self.to_abn, self.pair.to_abn))
+            if not self.equal_bsb:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'BSB does not match', '', '', self.bsb, self.pair.bsb))
+            if not self.equal_account:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'Account does not match', '', '', self.account, self.pair.account))
+            if not self.equal_final_total:
+                self.summary_errors.append(new_error(
+                    self.filename, self.pair.filename, 'Total does not match', '', '', self.final_total, self.pair.final_total))
+
         row += 2
 
         for index, item in enumerate(HEADER_REFERRER):
@@ -237,7 +259,7 @@ class ReferrerTaxInvoice(TaxInvoice):
         # Write unmatched records
         for key in keys_unmatched:
             self.summary_errors += ReferrerInvoiceRow.write_row(
-                worksheet, self, self.pair.datarows[key], row, fmt_error, 'right')
+                worksheet, self, self.pair.datarows[key], row, fmt_error, 'right', write_errors=False)
             row += 1
 
         if len(self.summary_errors) > 0:
@@ -280,37 +302,37 @@ class ReferrerTaxInvoice(TaxInvoice):
     def equal_from(self):
         if self.pair is None:
             return False
-        return self._from == self.pair._from
+        return u.sanitize(self._from) == u.sanitize(self.pair._from)
 
     @property
     def equal_from_abn(self):
         if self.pair is None:
             return False
-        return self.from_abn == self.pair.from_abn
+        return u.sanitize(self.from_abn) == u.sanitize(self.pair.from_abn)
 
     @property
     def equal_to(self):
         if self.pair is None:
             return False
-        return self.to == self.pair.to
+        return u.sanitize(self.to) == u.sanitize(self.pair.to)
 
     @property
     def equal_to_abn(self):
         if self.pair is None:
             return False
-        return self.to_abn == self.pair.to_abn
+        return u.sanitize(self.to_abn) == u.sanitize(self.pair.to_abn)
 
     @property
     def equal_bsb(self):
         if self.pair is None:
             return False
-        return self.bsb == self.pair.bsb
+        return u.sanitize(self.bsb) == u.sanitize(self.pair.bsb)
 
     @property
     def equal_account(self):
         if self.pair is None:
             return False
-        return self.account == self.pair.account
+        return u.sanitize(self.account) == u.sanitize(self.pair.account)
 
     @property
     def equal_final_total(self):
@@ -461,24 +483,27 @@ class ReferrerInvoiceRow(InvoiceRow):
         worksheet.write(row, col + 5, element.total, format_)
 
         errors = []
-        line = element.row_number
+        line_a = element.row_number
         if element.pair is not None:
+            line_b = element.pair.row_number
             if write_errors:
                 if not element.equal_amount_paid:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line, element.amount_paid, element.pair.amount_paid))
+                        invoice.filename, invoice.pair.filename, 'Amount Paid does not match', line_a, line_b, element.amount_paid, element.pair.amount_paid))
 
                 if not element.equal_gst_paid:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'GST Paid does not match', line, element.gst_paid, element.pair.gst_paid))
+                        invoice.filename, invoice.pair.filename, 'GST Paid does not match', line_a, line_b, element.gst_paid, element.pair.gst_paid))
 
                 if not element.equal_total:
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, 'Total does not match', line, element.total, element.pair.total))
+                        invoice.filename, invoice.pair.filename, 'Total does not match', line_a, line_b, element.total, element.pair.total))
 
         else:
-            errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line))
-
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, ''))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a))
         return errors
 
 
