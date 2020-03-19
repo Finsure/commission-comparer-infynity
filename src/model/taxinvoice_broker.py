@@ -293,7 +293,9 @@ class BrokerInvoiceRow(InvoiceRow):
     def equal_bank(self):
         if self.pair is None:
             return False
-        return u.sanitize(self.bank) == u.sanitize(self.pair.bank)
+        bank_a = u.bank_fullname(self.bank)
+        bank_b = u.bank_fullname(self.pair.bank)
+        return u.sanitize(bank_a) == u.sanitize(bank_b)
 
     @property
     def equal_loan_balance(self):
@@ -356,7 +358,7 @@ class BrokerInvoiceRow(InvoiceRow):
             u.sanitize(self.commission_type) == u.sanitize(obj.commission_type)
             and u.sanitize(self.client) == u.sanitize(obj.client)
             and u.sanitize(self.reference_id) == u.sanitize(obj.reference_id)
-            and u.sanitize(self.bank) == u.sanitize(obj.bank)
+            and u.sanitize(u.bank_fullname(self.bank)) == u.sanitize(u.bank_fullname(obj.bank))
             and self.compare_numbers(self.loan_balance, obj.loan_balance, self.margin)
             and self.compare_numbers(self.amount_paid, obj.amount_paid, self.margin)
             and self.compare_numbers(self.gst_paid, obj.gst_paid, self.margin)
@@ -423,16 +425,6 @@ class BrokerInvoiceRow(InvoiceRow):
         else:
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
-                # print(element.commission_type)
-                # print(element.client)
-                # print(element.reference_id)
-                # print(element.bank)
-                # print(element.loan_balance)
-                # print(element.amount_paid)
-                # print(element.gst_paid)
-                # print(element.total_amount_paid)
-                # print(element.comments)
-                # print(element.row_number)
             else:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description))
 
