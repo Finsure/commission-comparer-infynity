@@ -8,6 +8,7 @@ from src.model.taxinvoice import (create_dirs, new_error, write_errors, get_head
 from src.model.taxinvoice_referrer import read_files_referrer
 from src.model.taxinvoice_broker import read_files_broker
 from src.model.taxinvoice_branch import read_files_branch
+from src.model.executive_summary import read_file_exec_summary
 from src.utils import bcolors
 
 
@@ -95,6 +96,18 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
     print_done_message()
 
 
+# @click.command('compare_executive_summary')
+# @click.option('-l', '--loose', type=float, default=0, help=DESC_LOOSE)
+# @click.argument('loankit_file', required=True, type=click.File(exists=True))
+# @click.argument('infynity_file', required=True, type=click.File(exists=True))
+def rcti_compare_executive_summary(loose, loankit_file, infynity_file):
+    print_start_message('executive summary')
+    exec_summary_loankit = read_file_exec_summary(loankit_file)
+    exec_summary_infynity = read_file_exec_summary(infynity_file)
+
+    print_done_message()
+
+
 def run_comparison(files_a, files_b, margin, summary_filname, summary_title, filepath_a, filepath_b):
     create_dirs()
 
@@ -146,6 +159,7 @@ def run_comparison(files_a, files_b, margin, summary_filname, summary_title, fil
 # rcti.add_command(rcti_compare_referrer)
 # rcti.add_command(rcti_compare_broker)
 # rcti.add_command(rcti_compare_branch)
+# rcti.add_command(rcti_compare_executive_summary)
 
 def print_start_message(type: str):
     print(f"{bcolors.BOLD}Starting {type} files comparison...{bcolors.ENDC}")
@@ -167,18 +181,22 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    rcti_compare_referrer(
+    # rcti_compare_referrer(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    # rcti_compare_broker(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    # rcti_compare_branch(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    rcti_compare_executive_summary(
         0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    rcti_compare_broker(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    rcti_compare_branch(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/LK_Finsure_ES_Report_13230_Thu_Feb_20_2020.xls',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/INF_Finsure_ES_Report_18551_Mon_Mar_02_2020.xlsx')
 
 
 # SIMULATE REFERRER
