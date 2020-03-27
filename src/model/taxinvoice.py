@@ -15,7 +15,8 @@ OUTPUT_DIR_PID = OUTPUT_DIR + PID + '/'
 OUTPUT_DIR_REFERRER = OUTPUT_DIR_PID + 'referrer_rctis/'
 OUTPUT_DIR_BROKER = OUTPUT_DIR_PID + 'broker_rctis/'
 OUTPUT_DIR_BRANCH = OUTPUT_DIR_PID + 'branch_rctis/'
-OUTPUT_DIR_SUMMARY = OUTPUT_DIR_PID + 'executive_summary/'
+OUTPUT_DIR_SUMMARY = OUTPUT_DIR_PID + 'summary/'
+OUTPUT_DIR_EXEC_SUMMARY = OUTPUT_DIR_PID + 'executive_summary/'
 
 
 class TaxInvoice:
@@ -83,6 +84,9 @@ def create_dirs():
 
     if not os.path.exists(OUTPUT_DIR_SUMMARY):
         os.mkdir(OUTPUT_DIR_SUMMARY)
+
+    if not os.path.exists(OUTPUT_DIR_EXEC_SUMMARY):
+        os.mkdir(OUTPUT_DIR_EXEC_SUMMARY)
 
 
 def new_error(file_a, file_b, msg, line_a='', line_b='', value_a='', value_b='', tab=''):

@@ -102,8 +102,13 @@ def rcti_compare_branch(loose, loankit_dir, infynity_dir):
 # @click.argument('infynity_file', required=True, type=click.File(exists=True))
 def rcti_compare_executive_summary(loose, loankit_file, infynity_file):
     print_start_message('executive summary')
-    exec_summary_loankit = read_file_exec_summary(loankit_file)
     exec_summary_infynity = read_file_exec_summary(infynity_file)
+    exec_summary_loankit = read_file_exec_summary(loankit_file)
+
+    exec_summary_infynity.pair = exec_summary_loankit
+    exec_summary_infynity.margin = loose
+    create_dirs()
+    exec_summary_infynity.process_comparison(margin=loose)
 
     print_done_message()
 
