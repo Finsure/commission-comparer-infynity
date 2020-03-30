@@ -29,6 +29,7 @@ class ExecutiveSummary(TaxInvoice):
     def parse(self):
         xl = pandas.ExcelFile(self.full_path)
         self.parse_branch_summary_report(xl)
+        self.parse_branch_fee_summary_report(xl)
 
     def parse_branch_summary_report(self, excel_file):
         df = excel_file.parse('Branch Summary Report')
@@ -42,6 +43,35 @@ class ExecutiveSummary(TaxInvoice):
                 drow['ID'] = int(drow['ID'])
             self.datarows_branch_summary[drow['ID']] = drow
 
+    # def parse_to_dict(self, xl, tab):
+    #     rows = {}
+    #     df = xl.parse(tab)
+    #     df = df.dropna(how='all')  # remove rows that don't have any value
+    #     df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
+    #     df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
+    #     for index, row in df.iterrows():
+    #         drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
+    #         drow['line'] = index
+    #         if drow['ID'] != 'Total':
+    #             drow['ID'] = int(drow['ID'])
+    #         rows[drow['ID']] = drow
+    #     return rows
+
+    def parse_branch_fee_summary_report(self, excel_file):
+        try:
+            df = excel_file.parse('Branch Fee Summary Report')
+            df = df.dropna(how='all')  # remove rows that don't have any value
+            df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
+            df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
+            for index, row in df.iterrows():
+                drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
+                drow['line'] = index
+                if drow['ID'] != 'Total':
+                    drow['ID'] = int(drow['ID'])
+                self.datarows_branch_fee_summary[drow['ID']] = drow
+        except Exception:
+            pass
+
     def process_comparison(self, margin=0.000001):
         assert type(self.pair) == type(self), "self.pair is not of the correct type"
 
@@ -52,6 +82,14 @@ class ExecutiveSummary(TaxInvoice):
         fmt_table_header = get_header_format(workbook)
         fmt_error = get_error_format(workbook)
 
+        self.process_branch_summary(workbook, fmt_table_header, fmt_error)
+        self.process_branch_fee_summary(workbook, fmt_table_header, fmt_error)
+        self.process_broker_summary(workbook, fmt_table_header, fmt_error)
+        self.process_broker_fee_summary(workbook, fmt_table_header, fmt_error)
+
+        workbook.close()
+
+    def process_branch_summary(self, workbook, fmt_table_header, fmt_error):
         current_tab = 'Branch Summary Report'
         worksheet = workbook.add_worksheet(current_tab)
 
@@ -67,7 +105,6 @@ class ExecutiveSummary(TaxInvoice):
             worksheet.write(row, col_b + index, item, fmt_table_header)
         row += 1
 
-
         keys_unmatched = set(self.pair.datarows_branch_summary.keys()) - set(self.datarows_branch_summary.keys())
 
         for key in self.datarows_branch_summary.keys():
@@ -77,10 +114,54 @@ class ExecutiveSummary(TaxInvoice):
             self.summary_errors += comapre_dicts(
                 worksheet, row, self_row, pair_row, self.margin, self.filename, self.pair.filename,
                 fmt_error, current_tab)
-
             row += 1
 
-        workbook.close()
+        # Write unmatched records
+        for key in keys_unmatched:
+            self.summary_errors += comapre_dicts(
+                worksheet, row, None, self.pair.datarows_branch_summary[key], self.margin,
+                self.filename, self.pair.filename, fmt_error, current_tab)
+            row += 1
+
+    def process_branch_fee_summary(self, workbook, fmt_table_header, fmt_error):
+        current_tab = 'Branch Fee Summary Report'
+        worksheet = workbook.add_worksheet(current_tab)
+
+        # This return an arbitrary element from the dictionary so we can get the headers
+        header = next(iter(self.datarows_branch_fee_summary.values()))
+
+        row = 0
+        col_a = 0
+        col_b = len(header.keys()) + 1
+
+        for index, item in enumerate(header.keys()):
+            worksheet.write(row, col_a + index, item, fmt_table_header)
+            worksheet.write(row, col_b + index, item, fmt_table_header)
+        row += 1
+
+        keys_unmatched = set(self.pair.datarows_branch_summary.keys()) - set(self.datarows_branch_fee_summary.keys())
+
+        for key in self.datarows_branch_fee_summary.keys():
+            self_row = self.datarows_branch_fee_summary[key]
+            pair_row = self.pair.datarows_branch_summary.get(key, None)
+
+            self.summary_errors += comapre_dicts(
+                worksheet, row, self_row, pair_row, self.margin, self.filename, self.pair.filename,
+                fmt_error, current_tab)
+            row += 1
+
+        # Write unmatched records
+        for key in keys_unmatched:
+            self.summary_errors += comapre_dicts(
+                worksheet, row, None, self.pair.datarows_branch_summary[key], self.margin,
+                self.filename, self.pair.filename, fmt_error, current_tab)
+            row += 1
+
+    def process_broker_summary(self, workbook, fmt_table_header, fmt_error):
+        pass
+
+    def process_broker_fee_summary(self, workbook, fmt_table_header, fmt_error):
+        pass
 
     def new_error(self, msg, line_a='', line_b='', value_a='', value_b='', tab=''):
         return new_error(self.filename, self.pair.filename, msg, line_a, line_b, value_a, value_b, tab)
