@@ -108,7 +108,22 @@ def rcti_compare_executive_summary(loose, loankit_file, infynity_file):
     exec_summary_infynity.pair = exec_summary_loankit
     exec_summary_infynity.margin = loose
     create_dirs()
-    exec_summary_infynity.process_comparison(margin=loose)
+    summary_errors = exec_summary_infynity.process_comparison(margin=loose)
+
+    # Create summary based on errors
+    file = f"{OUTPUT_DIR_SUMMARY}{'Final Summary'}.xlsx"
+    workbook = xlsxwriter.Workbook(file)
+    worksheet = workbook.add_worksheet('Summary')
+    fmt_title = get_title_format(workbook)
+    fmt_table_header = get_header_format(workbook)
+    worksheet.merge_range('A1:I1', 'Summary', fmt_title)
+    row = 1
+    col = 0
+    worksheet.write(row, col, f"Number of issues: {str(len(summary_errors))}")
+    row += 2
+    worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header,
+                             exec_summary_infynity.directory, exec_summary_loankit.directory)
+    workbook.close()
 
     print_done_message()
 

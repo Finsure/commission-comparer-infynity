@@ -2,12 +2,12 @@
 import numpy
 import pandas
 import xlrd
+import copy
 
 from src.model.taxinvoice import (TaxInvoice, new_error, OUTPUT_DIR_EXEC_SUMMARY, get_header_format,
                                   get_error_format)
 from src import utils as u
 from src.utils import bcolors
-
 
 
 class ExecutiveSummary(TaxInvoice):
@@ -42,7 +42,7 @@ class ExecutiveSummary(TaxInvoice):
         try:
             df = xl.parse(tab)
             df = df.dropna(how='all')  # remove rows that don't have any value
-            df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
+            df = self.general_replaces(df)
             df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
             for index, row in df.iterrows():
                 drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
@@ -60,8 +60,7 @@ class ExecutiveSummary(TaxInvoice):
         try:
             df = xl.parse(tab)
             df = df.dropna(how='all')  # remove rows that don't have any value
-            df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
-
+            df = self.general_replaces(df)
             if tab in ['Broker Summary Report']:
                 df = df.rename(columns=df.iloc[1]).drop(df.index[0]).drop(df.index[1])  # Make first row the table header
             else:
@@ -72,7 +71,6 @@ class ExecutiveSummary(TaxInvoice):
                 del df['Broker ID']
                 del df['Broker Name']
 
-            print(df)
             for index, row in df.iterrows():
                 drow = df.loc[df[field_id] == row[field_id]].to_dict(orient='records')[0]
                 drow['line'] = index
@@ -111,19 +109,24 @@ class ExecutiveSummary(TaxInvoice):
             self.pair.datarows_broker_summary,
             fmt_table_header, fmt_error)
 
-        # self.process_generic(
-        #     workbook, 'Broker Fee Summary Report',
-        #     self.datarows_broker_fee_summary,
-        #     self.pair.datarows_broker_summary,
-        #     fmt_table_header, fmt_error)
+        self.process_generic(
+            workbook, 'Broker Fee Summary Report',
+            self.datarows_broker_fee_summary,
+            self.pair.datarows_broker_summary,
+            fmt_table_header, fmt_error)
 
-        workbook.close()
+        if len(self.summary_errors) > 0:
+            workbook.close()
+        else:
+            del workbook
+        return self.summary_errors
 
     def process_generic(self, workbook, tab, dict_a, dict_b, fmt_table_header, fmt_error):
         worksheet = workbook.add_worksheet(tab)
 
         # This return an arbitrary element from the dictionary so we can get the headers
-        header = next(iter(dict_a.values()))
+        header = copy.copy(next(iter(dict_a.values())))
+        del header['line']
 
         row = 0
         col_a = 0
@@ -155,18 +158,31 @@ class ExecutiveSummary(TaxInvoice):
     def new_error(self, msg, line_a='', line_b='', value_a='', value_b='', tab=''):
         return new_error(self.filename, self.pair.filename, msg, line_a, line_b, value_a, value_b, tab)
 
+    def general_replaces(self, df):
+        df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
+        df = df.replace('Incl.', 'Inc', regex=True)
+        df = df.replace('Excl.', 'Exc', regex=True)
+        # df = df.replace('Payment', 'Pmt', regex=True)
+        # df = df.replace('Amount', 'Amt', regex=True)
+
+        return df
+
 
 def comapre_dicts(worksheet, row, row_a, row_b, margin, filename_a, filename_b, fmt_error, tab):
     errors = []
+    if row_b is None:
+        errors.append(new_error(filename_a, filename_b, 'No corresponding row in commission file', row_a['line'], '', tab=tab))
+        return errors
+    elif row_a is None:
+        errors.append(new_error(filename_a, filename_b, 'No corresponding row in commission file', '', row_b['line'], tab=tab))
+        return errors
+
     col_a = 0
     col_b = len(row_a.keys()) + 1
 
-    if row_b is None:
-        errors.append(new_error(filename_a, filename_b, 'No corresponding row in commission file', row_a['line'], '', tab=tab))
-    elif row_a is None:
-        errors.append(new_error(filename_a, filename_b, 'No corresponding row in commission file', '', row_b['line'], tab=tab))
-
     for index, column in enumerate(row_a.keys()):
+        if column == 'line':
+            continue
 
         val_a = str(row_a[column])
         try:
@@ -182,6 +198,8 @@ def comapre_dicts(worksheet, row, row_a, row_b, margin, filename_a, filename_b, 
         if val_b is None:
             errors.append(new_error(filename_a, filename_b, f'No corresponding column ({column}) in commission file', tab=tab))
             worksheet.write(row, col_a, val_a, fmt_error)
+            col_a += 1
+            col_b += 1
             continue
 
         try:
@@ -205,7 +223,7 @@ def comapre_dicts(worksheet, row, row_a, row_b, margin, filename_a, filename_b, 
 
 
 def compare_values(val_a, val_b, margin):
-    if (type(val_a) == float) and (type(val_b) == float):
+    if type(val_a) == float and type(val_b) == float:
         return u.compare_numbers(val_a, val_b, margin)
     else:
         return u.sanitize(val_a) == u.sanitize(val_b)
