@@ -44,6 +44,40 @@ class ExecutiveSummary(TaxInvoice):
             df = df.dropna(how='all')  # remove rows that don't have any value
             df = self.general_replaces(df)
             df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
+
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Compliance Fee GST' in df.columns:
+                df['Compliance GST'] = df['Compliance Fee GST']
+                del df['Compliance Fee GST']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Compliance Fee Excl. GST' in df.columns:
+                df['Compliance Excl. GST'] = df['Compliance Fee Excl. GST']
+                del df['Compliance Fee Excl. GST']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Compliance Fee Incl. GST' in df.columns:
+                df['Compliance Incl. GST'] = df['Compliance Fee Incl. GST']
+                del df['Compliance Fee Incl. GST']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Conference fee' in df.columns:
+                df['Conference fee GST'] = df['Conference fee']
+                del df['Conference fee']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Fee Adjustment' in df.columns:
+                df['Fee Adjustment GST'] = df['Fee Adjustment']
+                del df['Fee Adjustment']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Goldfields Loan Repayment Finsure' in df.columns:
+                df['Goldfields Loan Repayment Finsure GST'] = df['Goldfields Loan Repayment Finsure']
+                del df['Goldfields Loan Repayment Finsure']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'RP Data' in df.columns:
+                df['RP Data GST'] = df['RP Data']
+                del df['RP Data']
+            # TODO: Remove the code below once received the updated version of the report
+            if 'Software Fee' in df.columns:
+                df['Software Fee GST'] = df['Software Fee']
+                del df['Software Fee']
+
             for index, row in df.iterrows():
                 drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
                 drow['line'] = index
@@ -55,10 +89,11 @@ class ExecutiveSummary(TaxInvoice):
         return rows
 
     def parse_broker(self, xl, tab):
-        field_id = 'Broker Name (ID)'
+        field_id = 'Broker ID'
         rows = {}
         try:
             df = xl.parse(tab)
+            df = df.loc[:, ~df.columns.duplicated()]  # Remove duplicate columns
             df = df.dropna(how='all')  # remove rows that don't have any value
             df = self.general_replaces(df)
             if tab in ['Broker Summary Report']:
@@ -66,16 +101,29 @@ class ExecutiveSummary(TaxInvoice):
             else:
                 df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
 
-            if 'Broker ID' in list(df):
-                df['Broker Name (ID)'] = df['Broker Name'] + ' (' + df['Broker ID'] + ')'
-                del df['Broker ID']
-                del df['Broker Name']
+            if 'Broker Name (ID)' in list(df):
+                df['Broker Name'] = ''
+                df['Broker ID'] = ''
+                for index, row in df.iterrows():
+                    try:
+                        row['Broker Name'] = row['Broker Name (ID)'].rsplit('(', 1)[0].strip()
+                        row['Broker ID'] = row['Broker Name (ID)'].rsplit('(', 1)[1][:-1]
+                    except IndexError:
+                        row['Broker Name'] = 'Total'
+                        row['Broker ID'] = 'Total'
+
+                    df.loc[index].at['Broker Name'] = row['Broker Name']
+                    df.loc[index].at['Broker ID'] = row['Broker ID']
+                df.drop(['Broker Name (ID)'], axis=1)
+
+                # df['RP Data Exc GST'] = df['RP Data']
+                # del df['RP Data']
+                # df['Compl'] = df['Compliance Fee Excl. GST']  # we use Excl. instead of Exc because of the general replaces
+                # del df['RP Data']
 
             for index, row in df.iterrows():
                 drow = df.loc[df[field_id] == row[field_id]].to_dict(orient='records')[0]
                 drow['line'] = index
-                if drow[field_id] != 'Total':
-                    drow[field_id] = u.sanitize(drow[field_id])
                 rows[drow[field_id]] = drow
         except xlrd.biffh.XLRDError:
             pass
@@ -160,12 +208,15 @@ class ExecutiveSummary(TaxInvoice):
 
     def general_replaces(self, df):
         df = df.replace(numpy.nan, '', regex=True)  # remove rows that don't have any value
-        df = df.replace('Incl.', 'Inc', regex=True)
-        df = df.replace('Excl.', 'Exc', regex=True)
-        # df = df.replace('Payment', 'Pmt', regex=True)
-        # df = df.replace('Amount', 'Amt', regex=True)
-
+        df = df.replace(' Inc GST', ' Incl. GST', regex=True)
+        df = df.replace(' Exc GST', ' Excl. GST', regex=True)
+        df = df.replace('Pmt ', 'Payment ', regex=True)
         return df
+
+    def parse_broker_name(self, val):
+        if len(val) == 0:
+            return val
+        return val.split('(')[0].strip()
 
 
 def comapre_dicts(worksheet, row, row_a, row_b, margin, filename_a, filename_b, fmt_error, tab):
@@ -178,10 +229,10 @@ def comapre_dicts(worksheet, row, row_a, row_b, margin, filename_a, filename_b, 
         return errors
 
     col_a = 0
-    col_b = len(row_a.keys()) + 1
+    col_b = len(row_a.keys())  # + 1
 
     for index, column in enumerate(row_a.keys()):
-        if column == 'line':
+        if column == 'line':  # if we evere remove this condition don't forget to add + 1 to 2 lines above
             continue
 
         val_a = str(row_a[column])
