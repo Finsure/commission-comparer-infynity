@@ -37,6 +37,15 @@ class ExecutiveSummary(TaxInvoice):
         self.margin = 0  # margin of error acceptable for numeric comprisons
         self.parse()
 
+    def __add_datarow(self, datarows_dict, counter_dict, row):
+        if row.key_full in datarows_dict.keys():  # If the row already exists
+            counter_dict[row.key_full] += 1  # Increment row count for that key_full
+            row.key_full = row._generate_key(counter_dict[row.key_full])  # Generate new key_full for the record
+            datarows_dict[row.key_full] = row  # Add row to the list
+        else:
+            counter_dict[row.key_full] = 0  # Start counter
+            datarows_dict[row.key_full] = row  # Add row to the list
+
     def parse(self):
         xl = pandas.ExcelFile(self.full_path)
         self.datarows_lender_upfront = self.parse_lender(xl, 'Lender Upfront Records')
@@ -48,7 +57,21 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_broker_fee_summary = self.parse_broker(xl, 'Broker Fee Summary Report')
 
     def parse_lender(self, xl, tab):
-        pass  # TODO
+        df = xl.parse(tab)
+        df = df.dropna(how='all')
+        df = self.general_replaces(df)
+        df = df.rename(columns=df.iloc[0]).drop(df.index[0])
+
+        rows_counter = {}
+        rows = {}
+        for index, row in df.iterrows():
+            lsum_row = LenderExecutiveSummaryRow(
+                row['Bank'], row['Bank Detailed Name'], row['Settlement Amount'],
+                row['Commission Amount (Excl GST)'], row['GST'], row['Commission Amount Incl. GST'],
+                index)
+            self.__add_datarow(rows, rows_counter, lsum_row)
+
+        return rows
 
     def parse_branch(self, xl, tab):
         rows = {}
@@ -102,7 +125,6 @@ class ExecutiveSummary(TaxInvoice):
         return rows
 
     def parse_broker(self, xl, tab):
-        field_id = 'Broker ID'
         rows = {}
         try:
             df = xl.parse(tab)
@@ -117,23 +139,28 @@ class ExecutiveSummary(TaxInvoice):
             if 'Broker Name (ID)' in list(df):
                 df['Broker Name'] = ''
                 df['Broker ID'] = ''
+                df['Branch Name'] = ''
+                df['Branch ID'] = ''
                 for index, row in df.iterrows():
                     try:
                         row['Broker Name'] = row['Broker Name (ID)'].rsplit('(', 1)[0].strip()
                         row['Broker ID'] = row['Broker Name (ID)'].rsplit('(', 1)[1][:-1]
+                        row['Branch Name'] = row['Branch Name (ID)'].rsplit('(', 1)[0].strip()
+                        row['Branch ID'] = row['Branch Name (ID)'].rsplit('(', 1)[1][:-1]
                     except IndexError:
                         row['Broker Name'] = 'Total'
                         row['Broker ID'] = 'Total'
+                        row['Branch Name'] = 'Total'
+                        row['Branch ID'] = 'Total'
 
                     df.loc[index].at['Broker Name'] = row['Broker Name']
                     df.loc[index].at['Broker ID'] = row['Broker ID']
+                    df.loc[index].at['Branch Name'] = row['Branch Name']
+                    df.loc[index].at['Branch ID'] = row['Branch ID']
                 df.drop(['Broker Name (ID)'], axis=1)
+                df.drop(['Branch Name (ID)'], axis=1)
 
-                # df['RP Data Exc GST'] = df['RP Data']
-                # del df['RP Data']
-                # df['Compl'] = df['Compliance Fee Excl. GST']  # we use Excl. instead of Exc because of the general replaces
-                # del df['RP Data']
-
+            field_id = 'Broker ID'
             for index, row in df.iterrows():
                 drow = df.loc[df[field_id] == row[field_id]].to_dict(orient='records')[0]
                 drow['line'] = index
@@ -152,6 +179,15 @@ class ExecutiveSummary(TaxInvoice):
         fmt_table_header = get_header_format(workbook)
         fmt_error = get_error_format(workbook)
 
+        self.process_lender(workbook, 'Lender Upfront Records', self.datarows_lender_upfront,
+                            self.pair.datarows_lender_upfront, fmt_table_header, fmt_error)
+
+        self.process_lender(workbook, 'Lender Trail Records', self.datarows_lender_trail,
+                            self.pair.datarows_lender_trail, fmt_table_header, fmt_error)
+
+        self.process_lender(workbook, 'Lender VBI Records', self.datarows_lender_vbi,
+                            self.pair.datarows_lender_vbi, fmt_table_header, fmt_error)
+
         self.process_generic(workbook, 'Branch Summary Report', self.datarows_branch_summary,
                              self.pair.datarows_branch_summary, fmt_table_header, fmt_error)
 
@@ -163,15 +199,6 @@ class ExecutiveSummary(TaxInvoice):
 
         self.process_generic(workbook, 'Broker Fee Summary Report', self.datarows_broker_fee_summary,
                              self.pair.datarows_broker_summary, fmt_table_header, fmt_error)
-
-        self.process_lender(workbook, 'Lender Upfront Records', self.datarows_lender_upfront,
-                            self.pair.datarows_lender_upfront, fmt_table_header, fmt_error)
-
-        self.process_lender(workbook, 'Lender Trail Records', self.datarows_lender_trail,
-                            self.pair.datarows_lender_trail, fmt_table_header, fmt_error)
-
-        self.process_lender(workbook, 'Lender VBI Records', self.datarows_lender_vbi,
-                            self.pair.datarows_lender_vbi, fmt_table_header, fmt_error)
 
         if len(self.summary_errors) > 0:
             workbook.close()
@@ -231,7 +258,7 @@ class ExecutiveSummary(TaxInvoice):
             self_row = datarows[key_full]
             self_row.margin = self.margin
 
-            pair_row = self.find_pair_row(self_row)
+            pair_row = self.find_pair_row(datarows_pair, self_row)
             self_row.pair = pair_row
 
             if pair_row is not None:
@@ -360,25 +387,25 @@ class LenderExecutiveSummaryRow(InvoiceRow):
     def equal_settlement_amount(self):
         if self.pair is None:
             return False
-        return self.compare_numbers(self.settlement_amount, self.pair.settlement_amount)
+        return self.compare_numbers(self.settlement_amount, self.pair.settlement_amount, self.margin)
 
     @property
     def equal_commission_amount_exc_gst(self):
         if self.pair is None:
             return False
-        return self.compare_numbers(self.commission_amount_exc_gst, self.pair.commission_amount_exc_gst)
+        return self.compare_numbers(self.commission_amount_exc_gst, self.pair.commission_amount_exc_gst, self.margin)
 
     @property
     def equal_gst(self):
         if self.pair is None:
             return False
-        return self.compare_numbers(self.gst, self.pair.gst)
+        return self.compare_numbers(self.gst, self.pair.gst, self.margin)
 
     @property
     def equal_commission_amount_inc_gst(self):
         if self.pair is None:
             return False
-        return self.compare_numbers(self.commission_amount_inc_gst, self.pair.commission_amount_inc_gst)
+        return self.compare_numbers(self.commission_amount_inc_gst, self.pair.commission_amount_inc_gst, self.margin)
     # endregion
 
     def _generate_key(self, salt=''):
@@ -390,10 +417,10 @@ class LenderExecutiveSummaryRow(InvoiceRow):
         sha = hashlib.sha256()
         sha.update(self.bank.encode(ENCODING))
         sha.update(self.bank_detailed_name.encode(ENCODING))
-        sha.update(self.settlement_amount.encode(ENCODING))
-        sha.update(self.commission_amount_exc_gst.encode(ENCODING))
-        sha.update(self.gst.encode(ENCODING))
-        sha.update(self.commission_amount_inc_gst.encode(ENCODING))
+        sha.update(str(self.settlement_amount).encode(ENCODING))
+        sha.update(str(self.commission_amount_exc_gst).encode(ENCODING))
+        sha.update(str(self.gst).encode(ENCODING))
+        sha.update(str(self.commission_amount_inc_gst).encode(ENCODING))
         sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
@@ -414,7 +441,7 @@ class LenderExecutiveSummaryRow(InvoiceRow):
     def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
         col = 0
         if side == 'right':
-            col = 10
+            col = len(HEADER_LENDER) + 1
 
         worksheet.write(row, col, element.bank)
 
@@ -432,9 +459,6 @@ class LenderExecutiveSummaryRow(InvoiceRow):
 
         format_ = fmt_error if not element.equal_commission_amount_inc_gst else None
         worksheet.write(row, col + 5, element.commission_amount_inc_gst, format_)
-
-        format_ = fmt_error if not element.equal_comments else None
-        worksheet.write(row, col + 6, element.comments, format_)
 
         errors = []
         line_a = element.row_number
@@ -457,20 +481,16 @@ class LenderExecutiveSummaryRow(InvoiceRow):
                     errors.append(new_error(
                         invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.commission_amount_exc_gst, element.pair.commission_amount_exc_gst))
 
-                if not element.equal_gst_paid:
+                if not element.equal_gst:
                     msg = 'Amount does not match'
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.gst_paid, element.pair.gst_paid))
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.gst, element.pair.gst))
 
-                if not element.equal_total_amount_paid:
+                if not element.equal_commission_amount_inc_gst:
                     msg = 'Total Amount Paid does not match'
                     errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.total_amount_paid, element.pair.total_amount_paid))
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.commission_amount_inc_gst, element.pair.commission_amount_inc_gst))
 
-                if not element.equal_comments:
-                    msg = 'Total Amount Paid does not match'
-                    errors.append(new_error(
-                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.comments, element.pair.comments))
         else:
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
