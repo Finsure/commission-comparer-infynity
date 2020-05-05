@@ -12,6 +12,7 @@ from src.utils import bcolors
 
 HEADER_LENDER = ['Bank', 'Bank Detailed Name', 'Settlement Amount', 'Commission Amount (Excl GST)',
                  'GST', 'Commission Amount Inc GST']
+HEADER_EXECUTIVE_SUMMARY = ['Description', 'Value']
 
 
 class ExecutiveSummary(TaxInvoice):
@@ -32,6 +33,7 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_lender_upfront = {}
         self.datarows_lender_trail = {}
         self.datarows_lender_vbi = {}
+        self.datarows_executive_summary = {}
         self.summary_errors = []  # List of errors found during the comparison
         self.pair = None
         self.margin = 0  # margin of error acceptable for numeric comprisons
@@ -55,6 +57,7 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_branch_fee_summary = self.parse_branch(xl, 'Branch Fee Summary Report')
         self.datarows_broker_summary = self.parse_broker(xl, 'Broker Summary Report')
         self.datarows_broker_fee_summary = self.parse_broker(xl, 'Broker Fee Summary Report')
+        self.datarows_executive_summary = self.parse_executive_summary(xl, 'Executive Summary Report')
 
     def parse_lender(self, xl, tab):
         df = xl.parse(tab)
@@ -92,6 +95,7 @@ class ExecutiveSummary(TaxInvoice):
                 'VBI Records GST': 'VBI Commission GST',
                 'VBI Records Incl. GST': 'VBI Commission Incl. GST',
                 'Total Commission': 'Total Commission Received',
+                'ID': 'Branch ID',
                 # 'xxx': 'Brokers Opening Balance',
                 # 'xxx': 'Upfront Commission - Brokers Incl. GST',
                 # 'xxx': 'Trail Commission - Brokers Incl. GST',
@@ -106,13 +110,13 @@ class ExecutiveSummary(TaxInvoice):
             df = self.replace_keys(replaces, df)
 
             for index, row in df.iterrows():
-                drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
+                drow = df.loc[df['Branch ID'] == row['Branch ID']].to_dict(orient='records')[0]
                 drow['line'] = index
-                if drow['ID'] != 'Total':
-                    drow['ID'] = int(drow['ID'])
-                rows[drow['ID']] = drow
-        except Exception:  # Exception if tab is not found
-            pass
+                if drow['Branch ID'] not in ['Total', '']:
+                    drow['Branch ID'] = int(drow['Branch ID'])
+                rows[drow['Branch ID']] = drow
+        except xlrd.biffh.XLRDError:  # Exception if tab is not found
+            print(f"{bcolors.YELLOW}No sheet named {tab} found in {bcolors.BLUE}{self.full_path}{bcolors.ENDC}")
         return rows
 
     def parse_broker(self, xl, tab):
@@ -164,7 +168,22 @@ class ExecutiveSummary(TaxInvoice):
                 drow['line'] = index
                 rows[drow[field_id]] = drow
         except xlrd.biffh.XLRDError:
-            pass
+            print(f"{bcolors.YELLOW}No sheet named {tab} found in {bcolors.BLUE}{self.full_path}{bcolors.ENDC}")
+        return rows
+
+    def parse_executive_summary(self, xl, tab):
+        rows = {}
+        df = xl.parse(tab)
+        df = df.dropna(how='all')  # remove rows that don't have any value
+        df = self.general_replaces(df)
+        # df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
+        rows_counter = {}
+        rows = {}
+        counter = 0
+        for index, row in df.iterrows():
+            execsum_row = ExecutiveSummaryRow(df.iloc[counter, 0], df.iloc[counter, 1], index)
+            self.__add_datarow(rows, rows_counter, execsum_row)
+            counter += 1
         return rows
 
     def replace_keys(self, replaces: dict, df):
@@ -183,6 +202,8 @@ class ExecutiveSummary(TaxInvoice):
         workbook = self.create_workbook(OUTPUT_DIR_EXEC_SUMMARY)
         fmt_table_header = get_header_format(workbook)
         fmt_error = get_error_format(workbook)
+
+        self.process_executive_summary(workbook, 'Executive Summary Report', fmt_table_header, fmt_error)
 
         self.process_lender(workbook, 'Lender Upfront Records', self.datarows_lender_upfront,
                             self.pair.datarows_lender_upfront, fmt_table_header, fmt_error)
@@ -284,6 +305,50 @@ class ExecutiveSummary(TaxInvoice):
         # Write unmatched records
         for key in keys_unmatched:
             self.summary_errors += LenderExecutiveSummaryRow.write_row(
+                worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
+            row += 1
+
+    def process_executive_summary(self, workbook, tab, fmt_table_header, fmt_error):
+        datarows = self.datarows_executive_summary
+        datarows_pair = self.pair.datarows_executive_summary
+        worksheet = workbook.add_worksheet(tab)
+        row = 0
+        col_a = 0
+        col_b = len(HEADER_EXECUTIVE_SUMMARY) + 1
+
+        for index, item in enumerate(HEADER_EXECUTIVE_SUMMARY):
+            worksheet.write(row, col_a + index, item, fmt_table_header)
+            worksheet.write(row, col_b + index, item, fmt_table_header)
+        row += 1
+
+        keys_unmatched = set(datarows_pair.keys()) - set(datarows.keys())
+
+        # Code below is just to find the errors and write them into the spreadsheets
+        for key_full in datarows.keys():
+            self_row = datarows[key_full]
+            self_row.margin = self.margin
+
+            pair_row = self.find_pair_row(datarows_pair, self_row)
+            self_row.pair = pair_row
+
+            if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del datarows_pair[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
+                pair_row.margin = self.margin
+                pair_row.pair = self_row
+                self.summary_errors += ExecutiveSummaryRow.write_row(
+                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
+
+            self.summary_errors += ExecutiveSummaryRow.write_row(worksheet, self, self_row, row, fmt_error)
+            row += 1
+
+        # Write unmatched records
+        for key in keys_unmatched:
+            self.summary_errors += ExecutiveSummaryRow.write_row(
                 worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
             row += 1
 
@@ -496,6 +561,115 @@ class LenderExecutiveSummaryRow(InvoiceRow):
                     errors.append(new_error(
                         invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.commission_amount_inc_gst, element.pair.commission_amount_inc_gst))
 
+        else:
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description))
+
+        return errors
+
+
+class ExecutiveSummaryRow(InvoiceRow):
+
+    def __init__(self, description, value, row_number):
+        InvoiceRow.__init__(self)
+        self._pair = None
+        self._margin = 0
+
+        self.description = description
+        self.value = value
+
+        self.row_number = row_number
+
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
+
+    # region Properties
+    @property
+    def key(self):
+        return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
+
+    @property
+    def key_full(self):
+        return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
+
+    @property
+    def pair(self):
+        return self._pair
+
+    @pair.setter
+    def pair(self, pair):
+        self._pair = pair
+
+    @property
+    def margin(self):
+        return self._margin
+
+    @margin.setter
+    def margin(self, margin):
+        self._margin = margin
+
+    @property
+    def equal_description(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.description) == u.sanitize(self.pair.description)
+
+    @property
+    def equal_value(self):
+        if self.pair is None:
+            return False
+        return self.compare_numbers(self.value, self.pair.value, self.margin)
+    # endregion
+
+    def _generate_key(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(u.sanitize(self.description).encode(ENCODING))
+        return sha.hexdigest()
+
+    def _generate_key_full(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(self.description.encode(ENCODING))
+        sha.update(str(self.value).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
+        return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != ExecutiveSummaryRow:
+            return False
+
+        return u.sanitize(self.description) == u.sanitize(obj.description) and self.compare_numbers(self.value, obj.value, self.margin)
+
+    @staticmethod
+    def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
+        col = 0
+        if side == 'right':
+            col = len(HEADER_EXECUTIVE_SUMMARY) + 1
+
+        worksheet.write(row, col, element.description)
+
+        format_ = fmt_error if not element.value else None
+        worksheet.write(row, col + 1, element.value, format_)
+
+        errors = []
+        line_a = element.row_number
+        description = f"{element.description}"
+        if element.pair is not None:
+            line_b = element.pair.row_number
+            if write_errors:
+                if not element.equal_value:
+                    msg = 'Value does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.value, element.pair.value))
         else:
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
