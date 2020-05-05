@@ -81,38 +81,29 @@ class ExecutiveSummary(TaxInvoice):
             df = self.general_replaces(df)
             df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
 
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Compliance Fee GST' in df.columns:
-                df['Compliance GST'] = df['Compliance Fee GST']
-                del df['Compliance Fee GST']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Compliance Fee Excl. GST' in df.columns:
-                df['Compliance Excl. GST'] = df['Compliance Fee Excl. GST']
-                del df['Compliance Fee Excl. GST']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Compliance Fee Incl. GST' in df.columns:
-                df['Compliance Incl. GST'] = df['Compliance Fee Incl. GST']
-                del df['Compliance Fee Incl. GST']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Conference fee' in df.columns:
-                df['Conference fee GST'] = df['Conference fee']
-                del df['Conference fee']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Fee Adjustment' in df.columns:
-                df['Fee Adjustment GST'] = df['Fee Adjustment']
-                del df['Fee Adjustment']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Goldfields Loan Repayment Finsure' in df.columns:
-                df['Goldfields Loan Repayment Finsure GST'] = df['Goldfields Loan Repayment Finsure']
-                del df['Goldfields Loan Repayment Finsure']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'RP Data' in df.columns:
-                df['RP Data GST'] = df['RP Data']
-                del df['RP Data']
-            # TODO: Remove the code below once received the updated version of the report
-            if 'Software Fee' in df.columns:
-                df['Software Fee GST'] = df['Software Fee']
-                del df['Software Fee']
+            replaces = {
+                'Upfront Rec Excl. GST': 'Upfront Commission Excl. GST',
+                'Upfront Records GST': 'Upfront Commission GST',
+                'Upfront Records Incl. GST': 'Upfront Commission Incl. GST',
+                'Trail Rec Excl. GST': 'Trail Commission Excl. GST',
+                'Trail Records GST': 'Trail Commission GST',
+                'Trail Records Incl. GST': 'Trail Commission Incl. GST',
+                'VBI Rec Excl. GST': 'VBI Commission Excl. GST',
+                'VBI Records GST': 'VBI Commission GST',
+                'VBI Records Incl. GST': 'VBI Commission Incl. GST',
+                'Total Commission': 'Total Commission Received',
+                # 'xxx': 'Brokers Opening Balance',
+                # 'xxx': 'Upfront Commission - Brokers Incl. GST',
+                # 'xxx': 'Trail Commission - Brokers Incl. GST',
+                # 'xxx': 'VBI Commission - Brokers Incl. GST',
+                # 'xxx': 'Fee Charged - Brokers Incl. GST',
+                # 'xxx': 'Total Commission Paid To Brokers Incl. GST',
+                # 'xxx': 'Brokers Closing Balance Incl. GST',
+                # 'xxx': 'Total Commission Paid To Referrers Incl. GST',
+                # 'xxx': 'Amount Retained by Branch Incl. GST',
+                # 'xxx': 'Total Commission Paid To Branch',
+            }
+            df = self.replace_keys(replaces, df)
 
             for index, row in df.iterrows():
                 drow = df.loc[df['ID'] == row['ID']].to_dict(orient='records')[0]
@@ -160,6 +151,13 @@ class ExecutiveSummary(TaxInvoice):
                 df.drop(['Broker Name (ID)'], axis=1)
                 df.drop(['Branch Name (ID)'], axis=1)
 
+            replaces = {
+                'Opening Carried Forward Balance': 'Opening Carried Forward Balance Incl. GST',
+                'Total Banked Amount': 'Amount Banked',
+                'Closing Carried Forward Balance': 'Closing Carried Forward Balance Inc GST'
+            }
+            df = self.replace_keys(replaces, df)
+
             field_id = 'Broker ID'
             for index, row in df.iterrows():
                 drow = df.loc[df[field_id] == row[field_id]].to_dict(orient='records')[0]
@@ -168,6 +166,13 @@ class ExecutiveSummary(TaxInvoice):
         except xlrd.biffh.XLRDError:
             pass
         return rows
+
+    def replace_keys(self, replaces: dict, df):
+        for key in replaces.keys():
+            if key in df.columns:
+                df[replaces[key]] = df[key]
+                del df[key]
+        return df
 
     def process_comparison(self, margin=0.000001):
         assert type(self.pair) == type(self), "self.pair is not of the correct type"

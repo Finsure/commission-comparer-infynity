@@ -1,0 +1,37 @@
+*** Branch Summary Report ***
+Brokers Opening Balance
+Upfront Commission - Brokers Incl. GST
+Trail Commission - Brokers Incl. GST
+VBI Commission - Brokers Incl. GST
+Fee Charged - Brokers Incl. GST
+Total Commission Paid To Brokers Incl. GST
+Brokers Closing Balance Incl. GST
+Total Commission Paid To Referrers Incl. GST
+Amount Retained by Branch Incl. GST
+Total Commission Paid To Branch
+
+
+*** Broker Summary Report ***
+Commission Amt Excl. GST
+Commission Amt GST
+Commission Amt Incl. GST
+Infynity Fee Excl. GST
+Infynity Fee GST
+Infynity Fee Incl. GST
+Broker Amount Calculated Excl. GST
+Broker Amount Calculated GST
+Broker Amount Calculated Incl. GST
+Fee Charged Excl. GST
+Fee Charged GST
+Fee Charged Incl. GST
+Amount Paid Excl. GST
+Amount Paid GST
+Amount Paid Incl. GST
+Amount Owing Excl. GST
+Amount Owing GST
+Amount Owing Incl. GST
+
+*** Broker Fee Summary Report ***
+Total Fee Exc GST
+Total Fee Charge GST
+Total Fee Charge Incl. GST

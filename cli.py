@@ -215,8 +215,8 @@ if __name__ == '__main__':
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
     rcti_compare_executive_summary(
         0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/LK_Finsure_ES_Report_13230_Thu_Feb_20_2020.xls',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/INF_Finsure_ES_Report_18551_Mon_Mar_02_2020.xlsx')
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/Finsure_ES_Report_4032_Mon_May_4_2020.xls',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/Finsure_ES_Report_9386__Thu_Apr_09_2020.xlsx')
 
 
 # SIMULATE REFERRER
