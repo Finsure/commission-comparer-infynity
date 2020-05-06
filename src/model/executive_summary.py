@@ -13,6 +13,8 @@ from src.utils import bcolors
 HEADER_LENDER = ['Bank', 'Bank Detailed Name', 'Settlement Amount', 'Commission Amount (Excl GST)',
                  'GST', 'Commission Amount Inc GST']
 HEADER_EXECUTIVE_SUMMARY = ['Description', 'Value']
+HEADER_REFERRER = ['Branch ID', 'Branch Company Name', 'Referrer Name', 'Opening Balance',
+                   'Commission Amount Paid Incl. GST', 'Total Banked Amount', 'Closing Balance']
 
 
 class ExecutiveSummary(TaxInvoice):
@@ -34,6 +36,7 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_lender_trail = {}
         self.datarows_lender_vbi = {}
         self.datarows_executive_summary = {}
+        self.datarows_referrer = {}
         self.summary_errors = []  # List of errors found during the comparison
         self.pair = None
         self.margin = 0  # margin of error acceptable for numeric comprisons
@@ -58,6 +61,55 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_broker_summary = self.parse_broker(xl, 'Broker Summary Report')
         self.datarows_broker_fee_summary = self.parse_broker(xl, 'Broker Fee Summary Report')
         self.datarows_executive_summary = self.parse_executive_summary(xl, 'Executive Summary Report')
+        self.datarows_referrer = self.parse_referrer(xl, 'Referrer Summary Report')
+
+    def parse_referrer(self, xl, tab):
+        df = xl.parse(tab)
+        df = df[3:len(df)]
+        df = df.dropna(how='all')
+        df = self.general_replaces(df)
+        df = df.rename(columns=df.iloc[0]).drop(df.index[0])
+
+        replaces = {
+            'Opening Carried Forward Balance': 'Opening Balance',
+            'Closing Carried Forward Balance': 'Closing Balance',
+            'Payment': 'Commission Amount Paid Incl. GST'
+        }
+        df = self.replace_keys(replaces, df)
+
+        if 'Branch Name (ID)' in list(df.columns):
+            df['Branch ID'] = ''
+            df['Branch Company Name'] = ''
+            df['Referrer Name'] = ''
+            for index, row in df.iterrows():
+                try:
+                    row['Branch ID'] = row['Branch Name (ID)'].rsplit('(', 1)[1][:-1]
+                    row['Branch Company Name'] = row['Branch Name (ID)'].rsplit('(', 1)[0].strip()
+                    row['Referrer Name'] = row['Referrer Name (ID)'].rsplit('(', 1)[0].strip()
+                except IndexError:
+                    row['Branch ID'] = 'Total'
+                    row['Branch Company Name'] = 'Total'
+                    row['Referrer Name'] = 'Total'
+                df.loc[index].at['Branch ID'] = row['Branch ID']
+                df.loc[index].at['Branch Company Name'] = row['Branch Company Name']
+                df.loc[index].at['Referrer Name'] = row['Referrer Name']
+            df = df.drop(['Branch Name (ID)'], axis=1)
+            df = df.drop(['Referrer Name (ID)'], axis=1)
+            df = df.drop(['Invoice Number'], axis=1)
+        else:
+            df = df.drop(['Referrer Key'], axis=1)
+            df = df.drop(['Commission Amount Paid Excl. GST'], axis=1)
+            df = df.drop(['Commission Amount Paid GST'], axis=1)
+
+        rows = {}
+        rows_counter = {}
+        for index, row in df.iterrows():
+            rsum_row = ReferrerExecutiveSummaryRow(
+                row['Branch ID'], row['Branch Company Name'], row['Referrer Name'], row['Opening Balance'],
+                row['Commission Amount Paid Incl. GST'], row['Total Banked Amount'], row['Closing Balance'], index)
+            self.__add_datarow(rows, rows_counter, rsum_row)
+
+        return rows
 
     def parse_lender(self, xl, tab):
         df = xl.parse(tab)
@@ -70,8 +122,7 @@ class ExecutiveSummary(TaxInvoice):
         for index, row in df.iterrows():
             lsum_row = LenderExecutiveSummaryRow(
                 row['Bank'], row['Bank Detailed Name'], row['Settlement Amount'],
-                row['Commission Amount (Excl GST)'], row['GST'], row['Commission Amount Incl. GST'],
-                index)
+                row['Commission Amount (Excl GST)'], row['GST'], row['Commission Amount Incl. GST'], index)
             self.__add_datarow(rows, rows_counter, lsum_row)
 
         return rows
@@ -152,8 +203,8 @@ class ExecutiveSummary(TaxInvoice):
                     df.loc[index].at['Broker ID'] = row['Broker ID']
                     df.loc[index].at['Branch Name'] = row['Branch Name']
                     df.loc[index].at['Branch ID'] = row['Branch ID']
-                df.drop(['Broker Name (ID)'], axis=1)
-                df.drop(['Branch Name (ID)'], axis=1)
+                df = df.drop(['Broker Name (ID)'], axis=1)
+                df = df.drop(['Branch Name (ID)'], axis=1)
 
             replaces = {
                 'Opening Carried Forward Balance': 'Opening Carried Forward Balance Incl. GST',
@@ -226,6 +277,9 @@ class ExecutiveSummary(TaxInvoice):
         self.process_generic(workbook, 'Broker Fee Summary Report', self.datarows_broker_fee_summary,
                              self.pair.datarows_broker_summary, fmt_table_header, fmt_error)
 
+        self.process_referrer(workbook, 'Referrer Summary Report', self.datarows_referrer, self.pair.datarows_referrer,
+                              fmt_table_header, fmt_error)
+
         if len(self.summary_errors) > 0:
             workbook.close()
         else:
@@ -264,6 +318,48 @@ class ExecutiveSummary(TaxInvoice):
             self.summary_errors += comapre_dicts(
                 worksheet, row, None, dict_b[key], self.margin,
                 self.filename, self.pair.filename, fmt_error, tab)
+            row += 1
+
+    def process_referrer(self, workbook, tab, datarows, datarows_pair, fmt_table_header, fmt_error):
+        worksheet = workbook.add_worksheet(tab)
+        row = 0
+        col_a = 0
+        col_b = len(HEADER_REFERRER) + 1
+
+        for index, item in enumerate(HEADER_REFERRER):
+            worksheet.write(row, col_a + index, item, fmt_table_header)
+            worksheet.write(row, col_b + index, item, fmt_table_header)
+        row += 1
+
+        keys_unmatched = set(datarows_pair.keys()) - set(datarows.keys())
+
+        # Code below is just to find the errors and write them into the spreadsheets
+        for key_full in datarows.keys():
+            self_row = datarows[key_full]
+            self_row.margin = self.margin
+
+            pair_row = self.find_pair_row(datarows_pair, self_row)
+            self_row.pair = pair_row
+
+            if pair_row is not None:
+                # delete from pair list so it doesn't get matched again
+                del datarows_pair[pair_row.key_full]
+                # Remove the key from the keys_unmatched if it is there
+                if pair_row.key_full in keys_unmatched:
+                    keys_unmatched.remove(pair_row.key_full)
+
+                pair_row.margin = self.margin
+                pair_row.pair = self_row
+                self.summary_errors += ReferrerExecutiveSummaryRow.write_row(
+                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
+
+            self.summary_errors += ReferrerExecutiveSummaryRow.write_row(worksheet, self, self_row, row, fmt_error)
+            row += 1
+
+        # Write unmatched records
+        for key in keys_unmatched:
+            self.summary_errors += ReferrerExecutiveSummaryRow.write_row(
+                worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
             row += 1
 
     def process_lender(self, workbook, tab, datarows, datarows_pair, fmt_table_header, fmt_error):
@@ -634,6 +730,7 @@ class ExecutiveSummaryRow(InvoiceRow):
     def _generate_key(self, salt=''):
         sha = hashlib.sha256()
         sha.update(u.sanitize(self.description).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
         return sha.hexdigest()
 
     def _generate_key_full(self, salt=''):
@@ -657,7 +754,7 @@ class ExecutiveSummaryRow(InvoiceRow):
 
         worksheet.write(row, col, element.description)
 
-        format_ = fmt_error if not element.value else None
+        format_ = fmt_error if not element.equal_value else None
         worksheet.write(row, col + 1, element.value, format_)
 
         errors = []
@@ -670,6 +767,193 @@ class ExecutiveSummaryRow(InvoiceRow):
                     msg = 'Value does not match'
                     errors.append(new_error(
                         invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.value, element.pair.value))
+        else:
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description))
+
+        return errors
+
+
+class ReferrerExecutiveSummaryRow(InvoiceRow):
+
+    def __init__(self, branch_id, branch_name, referrer_name, opening_balance, commission_paid, total_amount_banked,
+                 closing_balance, row_number):
+        InvoiceRow.__init__(self)
+        self._pair = None
+        self._margin = 0
+
+        self.branch_id = branch_id
+        self.branch_name = branch_name
+        self.referrer_name = referrer_name
+        self.opening_balance = opening_balance
+        self.commission_paid = commission_paid
+        self.total_amount_banked = total_amount_banked
+        self.closing_balance = closing_balance
+
+        self.row_number = row_number
+
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
+
+    # region Properties
+    @property
+    def key(self):
+        return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
+
+    @property
+    def key_full(self):
+        return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
+
+    @property
+    def pair(self):
+        return self._pair
+
+    @pair.setter
+    def pair(self, pair):
+        self._pair = pair
+
+    @property
+    def margin(self):
+        return self._margin
+
+    @margin.setter
+    def margin(self, margin):
+        self._margin = margin
+
+    @property
+    def equal_branch_id(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.branch_id) == u.sanitize(self.pair.branch_id)
+
+    @property
+    def equal_branch_name(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.branch_name) == u.sanitize(self.pair.branch_name)
+
+    @property
+    def equal_referrer_name(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.referrer_name) == u.sanitize(self.pair.referrer_name)
+
+    @property
+    def equal_opening_balance(self):
+        if self.pair is None:
+            return False
+        return self.compare_numbers(self.opening_balance, self.pair.opening_balance, self.margin)
+
+    @property
+    def equal_commission_paid(self):
+        if self.pair is None:
+            return False
+        return self.compare_numbers(self.commission_paid, self.pair.commission_paid, self.margin)
+
+    @property
+    def equal_total_amount_banked(self):
+        if self.pair is None:
+            return False
+        return self.compare_numbers(self.total_amount_banked, self.pair.total_amount_banked, self.margin)
+
+    @property
+    def equal_closing_balance(self):
+        if self.pair is None:
+            return False
+        return self.compare_numbers(self.closing_balance, self.pair.closing_balance, self.margin)
+    # endregion
+
+    def _generate_key(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(u.sanitize(self.branch_id).encode(ENCODING))
+        sha.update(u.sanitize(self.branch_name).encode(ENCODING))
+        sha.update(u.sanitize(self.referrer_name).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
+        return sha.hexdigest()
+
+    def _generate_key_full(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(u.sanitize(self.branch_id).encode(ENCODING))
+        sha.update(u.sanitize(self.branch_name).encode(ENCODING))
+        sha.update(u.sanitize(self.referrer_name).encode(ENCODING))
+        sha.update(u.sanitize(str(self.opening_balance)).encode(ENCODING))
+        sha.update(u.sanitize(str(self.commission_paid)).encode(ENCODING))
+        sha.update(u.sanitize(str(self.total_amount_banked)).encode(ENCODING))
+        sha.update(u.sanitize(str(self.closing_balance)).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
+        return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != LenderExecutiveSummaryRow:
+            return False
+
+        return (
+            u.sanitize(self.branch_id) == u.sanitize(obj.branch_id)
+            and u.sanitize(self.branch_name) == u.sanitize(obj.branch_name)
+            and u.sanitize(self.referrer_name) == u.sanitize(obj.referrer_name)
+            and self.compare_numbers(self.opening_balance, obj.opening_balance, self.margin)
+            and self.compare_numbers(self.commission_paid, obj.commission_paid, self.margin)
+            and self.compare_numbers(self.total_amount_banked, obj.total_amount_banked, self.margin)
+            and self.compare_numbers(self.closing_balance, obj.closing_balance, self.margin)
+        )
+
+    @staticmethod
+    def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
+        col = 0
+        if side == 'right':
+            col = len(HEADER_REFERRER) + 1
+
+        worksheet.write(row, col, element.branch_id)
+        worksheet.write(row, col + 1, element.branch_name)
+        worksheet.write(row, col + 2, element.referrer_name)
+
+        format_ = fmt_error if not element.equal_opening_balance else None
+        worksheet.write(row, col + 3, element.opening_balance, format_)
+
+        format_ = fmt_error if not element.equal_commission_paid else None
+        worksheet.write(row, col + 4, element.commission_paid, format_)
+
+        format_ = fmt_error if not element.equal_total_amount_banked else None
+        worksheet.write(row, col + 5, element.total_amount_banked, format_)
+
+        format_ = fmt_error if not element.equal_closing_balance else None
+        worksheet.write(row, col + 6, element.closing_balance, format_)
+
+        errors = []
+        line_a = element.row_number
+        description = f"Referrer name: {element.referrer_name}"
+        if element.pair is not None:
+            line_b = element.pair.row_number
+            if write_errors:
+                if not element.equal_opening_balance:
+                    msg = 'Opening Balance does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.opening_balance, element.pair.opening_balance))
+
+                if not element.equal_commission_paid:
+                    msg = 'Commission Amount Paid Incl. GST does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.commission_paid, element.pair.commission_paid))
+
+                if not element.equal_total_amount_banked:
+                    msg = 'Total Banked Amount does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.total_amount_banked, element.pair.total_amount_banked))
+
+                if not element.equal_closing_balance:
+                    msg = 'Closing Balance does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.closing_balance, element.pair.closing_balance))
         else:
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
