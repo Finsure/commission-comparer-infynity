@@ -15,6 +15,8 @@ HEADER_LENDER = ['Bank', 'Bank Detailed Name', 'Settlement Amount', 'Commission 
 HEADER_EXECUTIVE_SUMMARY = ['Description', 'Value']
 HEADER_REFERRER = ['Branch ID', 'Branch Company Name', 'Referrer Name', 'Opening Balance',
                    'Commission Amount Paid Incl. GST', 'Total Banked Amount', 'Closing Balance']
+HEADER_DE = ['Aggregator', 'Aggregator BSB No#', 'Aggregator Acct No#', 'Branch ID', 'Agent Type', 'Company Name',
+             'Bank Account Name', 'BSB No#', 'Account No#', 'Amount Banked']
 
 
 class ExecutiveSummary(TaxInvoice):
@@ -37,6 +39,8 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_lender_vbi = {}
         self.datarows_executive_summary = {}
         self.datarows_referrer = {}
+        self.datarows_de_file_entries = {}
+        self.datarows_de_file_notpaid = {}
         self.summary_errors = []  # List of errors found during the comparison
         self.pair = None
         self.margin = 0  # margin of error acceptable for numeric comprisons
@@ -62,6 +66,8 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_broker_fee_summary = self.parse_broker(xl, 'Broker Fee Summary Report')
         self.datarows_executive_summary = self.parse_executive_summary(xl, 'Executive Summary Report')
         self.datarows_referrer = self.parse_referrer(xl, 'Referrer Summary Report')
+        self.datarows_de_file_entries = self.parse_de(xl, 'DE File Entries')
+        self.datarows_de_file_notpaid = self.parse_de(xl, 'DE File - Amount Not Paid')
 
     def parse_referrer(self, xl, tab):
         df = xl.parse(tab)
@@ -237,6 +243,40 @@ class ExecutiveSummary(TaxInvoice):
             counter += 1
         return rows
 
+    def parse_de(self, xl, tab):
+        rows = {}
+        try:
+            df = xl.parse(tab)
+            df = df.dropna(how='all')
+            df = self.general_replaces(df)
+            if df.columns[0] != 'Num#':
+                df = df.rename(columns=df.iloc[0]).drop(df.index[0])
+                df = df.drop(['Aggregator ABN No#'], axis=1)
+                df = df.drop(['ABN'], axis=1)
+                df = df.drop(['GST Registered'], axis=1)
+                df = df.drop(['Commission Email'], axis=1)
+                df = df.drop(['Mobile No#'], axis=1)
+            else:
+                df = df.drop(['Num#'], axis=1)
+
+            replaces = {
+                'Finsure BSB No#': 'Aggregator BSB No#',
+                'Finsure Acct No#': 'Aggregator Acct No#'
+            }
+            df = self.replace_keys(replaces, df)
+
+            rows_counter = {}
+            rows = {}
+            for index, row in df.iterrows():
+                lsum_row = DEExecutiveSummaryRow(
+                    row['Aggregator'], row['Aggregator BSB No#'], row['Aggregator Acct No#'], row['Branch ID'],
+                    row['Agent Type'], row['Company Name'], row['Bank Account Name'], row['BSB No#'],
+                    row['Account No#'], row['Amount Banked'], index)
+                self.__add_datarow(rows, rows_counter, lsum_row)
+        except xlrd.biffh.XLRDError:
+            print(f"{bcolors.YELLOW}No sheet named {tab} found in {bcolors.BLUE}{self.full_path}{bcolors.ENDC}")
+        return rows
+
     def replace_keys(self, replaces: dict, df):
         for key in replaces.keys():
             if key in df.columns:
@@ -251,34 +291,57 @@ class ExecutiveSummary(TaxInvoice):
             return None
 
         workbook = self.create_workbook(OUTPUT_DIR_EXEC_SUMMARY)
-        fmt_table_header = get_header_format(workbook)
-        fmt_error = get_error_format(workbook)
 
-        self.process_executive_summary(workbook, 'Executive Summary Report', fmt_table_header, fmt_error)
+        self.process_specific(
+            workbook, 'Executive Summary Report',
+            self.datarows_executive_summary, self.pair.datarows_executive_summary,
+            ExecutiveSummaryRow, HEADER_EXECUTIVE_SUMMARY)
 
-        self.process_lender(workbook, 'Lender Upfront Records', self.datarows_lender_upfront,
-                            self.pair.datarows_lender_upfront, fmt_table_header, fmt_error)
+        self.process_specific(
+            workbook, 'Lender Upfront Records',
+            self.datarows_lender_upfront, self.pair.datarows_lender_upfront,
+            LenderExecutiveSummaryRow, HEADER_LENDER)
 
-        self.process_lender(workbook, 'Lender Trail Records', self.datarows_lender_trail,
-                            self.pair.datarows_lender_trail, fmt_table_header, fmt_error)
+        self.process_specific(
+            workbook, 'Lender Trail Records',
+            self.datarows_lender_trail, self.pair.datarows_lender_trail,
+            LenderExecutiveSummaryRow, HEADER_LENDER)
 
-        self.process_lender(workbook, 'Lender VBI Records', self.datarows_lender_vbi,
-                            self.pair.datarows_lender_vbi, fmt_table_header, fmt_error)
+        self.process_specific(
+            workbook, 'Lender VBI Records',
+            self.datarows_lender_vbi, self.pair.datarows_lender_vbi,
+            LenderExecutiveSummaryRow, HEADER_LENDER)
 
-        self.process_generic(workbook, 'Branch Summary Report', self.datarows_branch_summary,
-                             self.pair.datarows_branch_summary, fmt_table_header, fmt_error)
+        self.process_generic(
+            workbook, 'Branch Summary Report',
+            self.datarows_branch_summary, self.pair.datarows_branch_summary)
 
-        self.process_generic(workbook, 'Branch Fee Summary Report', self.datarows_branch_fee_summary,
-                             self.pair.datarows_branch_summary, fmt_table_header, fmt_error)
+        self.process_generic(
+            workbook, 'Branch Fee Summary Report',
+            self.datarows_branch_fee_summary, self.pair.datarows_branch_summary)
 
-        self.process_generic(workbook, 'Broker Summary Report', self.datarows_broker_summary,
-                             self.pair.datarows_broker_summary, fmt_table_header, fmt_error)
+        self.process_generic(
+            workbook, 'Broker Summary Report',
+            self.datarows_broker_summary, self.pair.datarows_broker_summary)
 
-        self.process_generic(workbook, 'Broker Fee Summary Report', self.datarows_broker_fee_summary,
-                             self.pair.datarows_broker_summary, fmt_table_header, fmt_error)
+        self.process_generic(
+            workbook, 'Broker Fee Summary Report',
+            self.datarows_broker_fee_summary, self.pair.datarows_broker_summary)
 
-        self.process_referrer(workbook, 'Referrer Summary Report', self.datarows_referrer, self.pair.datarows_referrer,
-                              fmt_table_header, fmt_error)
+        self.process_specific(
+            workbook, 'Referrer Summary Report',
+            self.datarows_referrer, self.pair.datarows_referrer,
+            ReferrerExecutiveSummaryRow, HEADER_REFERRER)
+
+        self.process_specific(
+            workbook, 'DE File Entries',
+            self.datarows_de_file_entries, self.pair.datarows_de_file_entries,
+            DEExecutiveSummaryRow, HEADER_DE)
+
+        self.process_specific(
+            workbook, 'DE File - Amount Not Paid',
+            self.datarows_de_file_notpaid, self.pair.datarows_de_file_notpaid,
+            DEExecutiveSummaryRow, HEADER_DE)
 
         if len(self.summary_errors) > 0:
             workbook.close()
@@ -286,8 +349,10 @@ class ExecutiveSummary(TaxInvoice):
             del workbook
         return self.summary_errors
 
-    def process_generic(self, workbook, tab, dict_a, dict_b, fmt_table_header, fmt_error):
+    def process_generic(self, workbook, tab, dict_a, dict_b):
         worksheet = workbook.add_worksheet(tab)
+        fmt_table_header = get_header_format(workbook)
+        fmt_error = get_error_format(workbook)
 
         # This return an arbitrary element from the dictionary so we can get the headers
         header = copy.copy(next(iter(dict_a.values())))
@@ -320,13 +385,16 @@ class ExecutiveSummary(TaxInvoice):
                 self.filename, self.pair.filename, fmt_error, tab)
             row += 1
 
-    def process_referrer(self, workbook, tab, datarows, datarows_pair, fmt_table_header, fmt_error):
+    def process_specific(self, workbook, tab, datarows, datarows_pair, cls, header):
         worksheet = workbook.add_worksheet(tab)
+        fmt_table_header = get_header_format(workbook)
+        fmt_error = get_error_format(workbook)
+
         row = 0
         col_a = 0
-        col_b = len(HEADER_REFERRER) + 1
+        col_b = len(header) + 1
 
-        for index, item in enumerate(HEADER_REFERRER):
+        for index, item in enumerate(header):
             worksheet.write(row, col_a + index, item, fmt_table_header)
             worksheet.write(row, col_b + index, item, fmt_table_header)
         row += 1
@@ -350,101 +418,15 @@ class ExecutiveSummary(TaxInvoice):
 
                 pair_row.margin = self.margin
                 pair_row.pair = self_row
-                self.summary_errors += ReferrerExecutiveSummaryRow.write_row(
+                self.summary_errors += cls.write_row(
                     worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
 
-            self.summary_errors += ReferrerExecutiveSummaryRow.write_row(worksheet, self, self_row, row, fmt_error)
+            self.summary_errors += cls.write_row(worksheet, self, self_row, row, fmt_error)
             row += 1
 
         # Write unmatched records
         for key in keys_unmatched:
-            self.summary_errors += ReferrerExecutiveSummaryRow.write_row(
-                worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
-            row += 1
-
-    def process_lender(self, workbook, tab, datarows, datarows_pair, fmt_table_header, fmt_error):
-        worksheet = workbook.add_worksheet(tab)
-        row = 0
-        col_a = 0
-        col_b = len(HEADER_LENDER) + 1
-
-        for index, item in enumerate(HEADER_LENDER):
-            worksheet.write(row, col_a + index, item, fmt_table_header)
-            worksheet.write(row, col_b + index, item, fmt_table_header)
-        row += 1
-
-        keys_unmatched = set(datarows_pair.keys()) - set(datarows.keys())
-
-        # Code below is just to find the errors and write them into the spreadsheets
-        for key_full in datarows.keys():
-            self_row = datarows[key_full]
-            self_row.margin = self.margin
-
-            pair_row = self.find_pair_row(datarows_pair, self_row)
-            self_row.pair = pair_row
-
-            if pair_row is not None:
-                # delete from pair list so it doesn't get matched again
-                del datarows_pair[pair_row.key_full]
-                # Remove the key from the keys_unmatched if it is there
-                if pair_row.key_full in keys_unmatched:
-                    keys_unmatched.remove(pair_row.key_full)
-
-                pair_row.margin = self.margin
-                pair_row.pair = self_row
-                self.summary_errors += LenderExecutiveSummaryRow.write_row(
-                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
-
-            self.summary_errors += LenderExecutiveSummaryRow.write_row(worksheet, self, self_row, row, fmt_error)
-            row += 1
-
-        # Write unmatched records
-        for key in keys_unmatched:
-            self.summary_errors += LenderExecutiveSummaryRow.write_row(
-                worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
-            row += 1
-
-    def process_executive_summary(self, workbook, tab, fmt_table_header, fmt_error):
-        datarows = self.datarows_executive_summary
-        datarows_pair = self.pair.datarows_executive_summary
-        worksheet = workbook.add_worksheet(tab)
-        row = 0
-        col_a = 0
-        col_b = len(HEADER_EXECUTIVE_SUMMARY) + 1
-
-        for index, item in enumerate(HEADER_EXECUTIVE_SUMMARY):
-            worksheet.write(row, col_a + index, item, fmt_table_header)
-            worksheet.write(row, col_b + index, item, fmt_table_header)
-        row += 1
-
-        keys_unmatched = set(datarows_pair.keys()) - set(datarows.keys())
-
-        # Code below is just to find the errors and write them into the spreadsheets
-        for key_full in datarows.keys():
-            self_row = datarows[key_full]
-            self_row.margin = self.margin
-
-            pair_row = self.find_pair_row(datarows_pair, self_row)
-            self_row.pair = pair_row
-
-            if pair_row is not None:
-                # delete from pair list so it doesn't get matched again
-                del datarows_pair[pair_row.key_full]
-                # Remove the key from the keys_unmatched if it is there
-                if pair_row.key_full in keys_unmatched:
-                    keys_unmatched.remove(pair_row.key_full)
-
-                pair_row.margin = self.margin
-                pair_row.pair = self_row
-                self.summary_errors += ExecutiveSummaryRow.write_row(
-                    worksheet, self, pair_row, row, fmt_error, 'right', write_errors=False)
-
-            self.summary_errors += ExecutiveSummaryRow.write_row(worksheet, self, self_row, row, fmt_error)
-            row += 1
-
-        # Write unmatched records
-        for key in keys_unmatched:
-            self.summary_errors += ExecutiveSummaryRow.write_row(
+            self.summary_errors += cls.write_row(
                 worksheet, self, datarows_pair[key], row, fmt_error, 'right', write_errors=False)
             row += 1
 
@@ -954,6 +936,252 @@ class ReferrerExecutiveSummaryRow(InvoiceRow):
                     msg = 'Closing Balance does not match'
                     errors.append(new_error(
                         invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.closing_balance, element.pair.closing_balance))
+        else:
+            if write_errors:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
+            else:
+                errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', '', line_a, value_b=description))
+
+        return errors
+
+
+class DEExecutiveSummaryRow(InvoiceRow):
+
+    def __init__(self, aggregator, aggregator_bsb_number, aggregator_acc_number, branch_id, agent_type,
+                 company_name, bank_account_name, bsb, account, amount_banked, row_number):
+        InvoiceRow.__init__(self)
+        self._pair = None
+        self._margin = 0
+
+        self.aggregator = aggregator
+        self.aggregator_bsb_number = aggregator_bsb_number
+        self.aggregator_acc_number = aggregator_acc_number
+        self.branch_id = branch_id
+        self.agent_type = agent_type
+        self.company_name = company_name
+        self.bank_account_name = bank_account_name
+        self.bsb = bsb
+        self.account = account
+        self.amount_banked = amount_banked
+
+        self.row_number = row_number
+
+        self._key = self._generate_key()
+        self._key_full = self._generate_key_full()
+
+    # region Properties
+    @property
+    def key(self):
+        return self._key
+
+    @key.setter
+    def key(self, k):
+        self._key = k
+
+    @property
+    def key_full(self):
+        return self._key_full
+
+    @key_full.setter
+    def key_full(self, k):
+        self._key_full = k
+
+    @property
+    def pair(self):
+        return self._pair
+
+    @pair.setter
+    def pair(self, pair):
+        self._pair = pair
+
+    @property
+    def margin(self):
+        return self._margin
+
+    @margin.setter
+    def margin(self, margin):
+        self._margin = margin
+
+    @property
+    def equal_aggregator(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.aggregator) == u.sanitize(self.pair.aggregator)
+
+    @property
+    def equal_aggregator_bsb_number(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.aggregator_bsb_number) == u.sanitize(self.pair.aggregator_bsb_number)
+
+    @property
+    def equal_aggregator_acc_number(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.aggregator_acc_number) == u.sanitize(self.pair.aggregator_acc_number)
+
+    @property
+    def equal_branch_id(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.branch_id) == u.sanitize(self.pair.branch_id)
+
+    @property
+    def equal_agent_type(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.agent_type) == u.sanitize(self.pair.agent_type)
+
+    @property
+    def equal_company_name(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.company_name) == u.sanitize(self.pair.company_name)
+
+    @property
+    def equal_bank_account_name(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.bank_account_name) == u.sanitize(self.pair.bank_account_name)
+
+    @property
+    def equal_bsb(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.bsb) == u.sanitize(self.pair.bsb)
+
+    @property
+    def equal_account(self):
+        if self.pair is None:
+            return False
+        return u.sanitize(self.account) == u.sanitize(self.pair.account)
+
+    @property
+    def equal_amount_banked(self):
+        if self.pair is None:
+            return False
+        return u.compare_numbers(self.amount_banked, self.pair.amount_banked, self.margin)
+    # endregion
+
+    def _generate_key(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(u.sanitize(self.bsb).encode(ENCODING))
+        sha.update(u.sanitize(self.account).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
+        return sha.hexdigest()
+
+    def _generate_key_full(self, salt=''):
+        sha = hashlib.sha256()
+        sha.update(u.sanitize(self.aggregator).encode(ENCODING))
+        sha.update(u.sanitize(self.aggregator_bsb_number).encode(ENCODING))
+        sha.update(u.sanitize(self.aggregator_acc_number).encode(ENCODING))
+        sha.update(u.sanitize(self.branch_id).encode(ENCODING))
+        sha.update(u.sanitize(self.agent_type).encode(ENCODING))
+        sha.update(u.sanitize(self.company_name).encode(ENCODING))
+        sha.update(u.sanitize(self.bank_account_name).encode(ENCODING))
+        sha.update(u.sanitize(self.bsb).encode(ENCODING))
+        sha.update(u.sanitize(self.account).encode(ENCODING))
+        sha.update(u.sanitize(str(self.amount_banked)).encode(ENCODING))
+        sha.update(str(salt).encode(ENCODING))
+        return sha.hexdigest()
+
+    def equals(self, obj):
+        if type(obj) != LenderExecutiveSummaryRow:
+            return False
+
+        return (
+            u.sanitize(self.aggregator) == u.sanitize(obj.aggregator)
+            and u.sanitize(self.aggregator_bsb_number) == u.sanitize(obj.aggregator_bsb_number)
+            and u.sanitize(self.aggregator_acc_number) == u.sanitize(obj.aggregator_acc_number)
+            and u.sanitize(self.branch_id) == u.sanitize(obj.branch_id)
+            and u.sanitize(self.agent_type) == u.sanitize(obj.agent_type)
+            and u.sanitize(self.company_name) == u.sanitize(obj.company_name)
+            and u.sanitize(self.bank_account_name) == u.sanitize(obj.bank_account_name)
+            and u.sanitize(self.bsb) == u.sanitize(obj.bsb)
+            and u.sanitize(self.account) == u.sanitize(obj.account)
+            and u.compare_numbers(self.amount_banked, obj.amount_banked, self.margin)
+        )
+
+    @staticmethod
+    def write_row(worksheet, invoice, element, row, fmt_error, side='left', write_errors=True):
+        col = 0
+        if side == 'right':
+            col = len(HEADER_DE) + 1
+
+        format_ = fmt_error if not element.equal_aggregator else None
+        worksheet.write(row, col, element.aggregator, format_)
+
+        format_ = fmt_error if not element.equal_aggregator_bsb_number else None
+        worksheet.write(row, col + 1, element.aggregator_bsb_number, format_)
+
+        format_ = fmt_error if not element.equal_aggregator_acc_number else None
+        worksheet.write(row, col + 2, element.aggregator_acc_number, format_)
+
+        format_ = fmt_error if not element.equal_branch_id else None
+        worksheet.write(row, col + 3, element.branch_id, format_)
+
+        format_ = fmt_error if not element.equal_agent_type else None
+        worksheet.write(row, col + 4, element.agent_type, format_)
+
+        format_ = fmt_error if not element.equal_company_name else None
+        worksheet.write(row, col + 5, element.company_name, format_)
+
+        format_ = fmt_error if not element.equal_bank_account_name else None
+        worksheet.write(row, col + 6, element.bank_account_name, format_)
+
+        worksheet.write(row, col + 7, element.bsb)
+        worksheet.write(row, col + 8, element.account)
+
+        format_ = fmt_error if not element.equal_amount_banked else None
+        worksheet.write(row, col + 9, element.amount_banked, format_)
+
+        errors = []
+        line_a = element.row_number
+        description = f"Bank Account Name: {element.bank_account_name}"
+        if element.pair is not None:
+            line_b = element.pair.row_number
+            if write_errors:
+
+                if not element.equal_aggregator:
+                    msg = 'Aggregator does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.aggregator, element.pair.aggregator))
+
+                if not element.equal_aggregator_bsb_number:
+                    msg = 'Aggregator BSB N# does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.aggregator_bsb_number, element.pair.aggregator_bsb_number))
+
+                if not element.equal_aggregator_acc_number:
+                    msg = 'Agregator Acct No# does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.aggregator_acc_number, element.pair.aggregator_acc_number))
+
+                if not element.equal_branch_id:
+                    msg = 'Branch ID does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.branch_id, element.pair.branch_id))
+
+                if not element.equal_agent_type:
+                    msg = 'Agent Type does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.agent_type, element.pair.agent_type))
+
+                if not element.equal_company_name:
+                    msg = 'Company Name does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.company_name, element.pair.company_name))
+
+                if not element.equal_bank_account_name:
+                    msg = 'Bank Account Name does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.bank_account_name, element.pair.bank_account_name))
+
+                if not element.equal_amount_banked:
+                    msg = 'Amount Banked does not match'
+                    errors.append(new_error(
+                        invoice.filename, invoice.pair.filename, msg, line_a, line_b, element.amount_banked, element.pair.amount_banked))
+
         else:
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
