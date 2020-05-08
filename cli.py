@@ -201,18 +201,18 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    # rcti_compare_referrer(
-    #     0.5,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    # rcti_compare_broker(
-    #     0.5,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    # rcti_compare_branch(
-    #     0.5,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    rcti_compare_referrer(
+        0.5,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    rcti_compare_broker(
+        0.5,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    rcti_compare_branch(
+        0.5,
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
     rcti_compare_executive_summary(
         0.5,
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/Finsure_ES_Report_4032_Mon_May_4_2020.xls',

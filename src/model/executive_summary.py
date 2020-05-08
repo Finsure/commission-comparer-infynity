@@ -41,6 +41,7 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_referrer = {}
         self.datarows_de_file_entries = {}
         self.datarows_de_file_notpaid = {}
+        self.datarows_fee = {}
         self.summary_errors = []  # List of errors found during the comparison
         self.pair = None
         self.margin = 0  # margin of error acceptable for numeric comprisons
@@ -68,6 +69,7 @@ class ExecutiveSummary(TaxInvoice):
         self.datarows_referrer = self.parse_referrer(xl, 'Referrer Summary Report')
         self.datarows_de_file_entries = self.parse_de(xl, 'DE File Entries')
         self.datarows_de_file_notpaid = self.parse_de(xl, 'DE File - Amount Not Paid')
+        self.datarows_fee = self.parse_executive_summary(xl, 'Fee Summary Report')
 
     def parse_referrer(self, xl, tab):
         df = xl.parse(tab)
@@ -233,7 +235,6 @@ class ExecutiveSummary(TaxInvoice):
         df = xl.parse(tab)
         df = df.dropna(how='all')  # remove rows that don't have any value
         df = self.general_replaces(df)
-        # df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
         rows_counter = {}
         rows = {}
         counter = 0
@@ -295,6 +296,11 @@ class ExecutiveSummary(TaxInvoice):
         self.process_specific(
             workbook, 'Executive Summary Report',
             self.datarows_executive_summary, self.pair.datarows_executive_summary,
+            ExecutiveSummaryRow, HEADER_EXECUTIVE_SUMMARY)
+
+        self.process_specific(
+            workbook, 'Fee Summary Report',
+            self.datarows_fee, self.pair.datarows_fee,
             ExecutiveSummaryRow, HEADER_EXECUTIVE_SUMMARY)
 
         self.process_specific(
@@ -706,6 +712,11 @@ class ExecutiveSummaryRow(InvoiceRow):
     def equal_value(self):
         if self.pair is None:
             return False
+
+        # Fix for header that is being compared in the Fee Tab
+        if self.value == 'Amounts':
+            return True
+
         return self.compare_numbers(self.value, self.pair.value, self.margin)
     # endregion
 
