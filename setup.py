@@ -19,7 +19,12 @@ setup(
     packages=["src"],
     include_package_data=True,
     install_requires=[
-        "beautifulsoup4", "click", "flake8", "xlsxwriter", "pandas", "xlrd"
+        "beautifulsoup4",
+        "click",
+        "flake8",
+        "xlsxwriter",
+        "pandas",
+        "xlrd"
     ],
     entry_points={"console_scripts": ["infynity=cli:main"]},
 )

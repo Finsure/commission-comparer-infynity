@@ -9,6 +9,7 @@ from src.model.taxinvoice_referrer import read_files_referrer
 from src.model.taxinvoice_broker import read_files_broker
 from src.model.taxinvoice_branch import read_files_branch
 from src.model.executive_summary import read_file_exec_summary
+from src.model.aba import read_file_aba
 from src.utils import bcolors
 
 
@@ -128,6 +129,36 @@ def rcti_compare_executive_summary(loose, loankit_file, infynity_file):
     print_done_message()
 
 
+# @click.command('compare_aba')
+# @click.argument('loankit_file', required=True, type=click.File(exists=True))
+# @click.argument('infynity_file', required=True, type=click.File(exists=True))
+def rcti_compare_aba(loankit_file, infynity_file):
+    print_start_message('aba files')
+    aba_infynity = read_file_aba(infynity_file)
+    aba_loankit = read_file_aba(loankit_file)
+
+    aba_infynity.pair = aba_loankit
+    create_dirs()
+    summary_errors = aba_infynity.process_comparison()
+
+    # Create summary based on errors
+    file = f"{OUTPUT_DIR_SUMMARY}{'ABA Summary'}.xlsx"
+    workbook = xlsxwriter.Workbook(file)
+    worksheet = workbook.add_worksheet('ABA Comparison Results')
+    fmt_title = get_title_format(workbook)
+    fmt_table_header = get_header_format(workbook)
+    worksheet.merge_range('A1:I1', 'Summary', fmt_title)
+    row = 1
+    col = 0
+    worksheet.write(row, col, f"Number of issues: {str(len(summary_errors))}")
+    row += 2
+    worksheet = write_errors(summary_errors, worksheet, row, col, fmt_table_header,
+                             aba_infynity.directory, aba_loankit.directory)
+    workbook.close()
+
+    print_done_message()
+
+
 def run_comparison(files_a, files_b, margin, summary_filname, summary_title, filepath_a, filepath_b):
     create_dirs()
 
@@ -201,22 +232,25 @@ def list_files(dir_: str) -> list:
 
 if __name__ == '__main__':
     # rcti()
-    rcti_compare_referrer(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
-    rcti_compare_broker(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
-    rcti_compare_branch(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
-    rcti_compare_executive_summary(
-        0.5,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/Finsure_ES_Report_4032_Mon_May_4_2020.xls',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/Finsure_ES_Report_27770__Sat_May_02_2020.xlsx')
+    # rcti_compare_referrer(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/referrer/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/referrer/')
+    # rcti_compare_broker(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/broker/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/broker/')
+    # rcti_compare_branch(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/branch/',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/branch/')
+    # rcti_compare_executive_summary(
+    #     0.5,
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/Finsure_ES_Report_4032_Mon_May_4_2020.xls',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/Finsure_ES_Report_27770__Sat_May_02_2020.xlsx')
+    rcti_compare_aba(
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/Finsure_DE_2020-05-04.txt',
+        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/Finsure_DE_File_27770__Sat_May_02_2020.txt')
 
 
 # SIMULATE REFERRER
