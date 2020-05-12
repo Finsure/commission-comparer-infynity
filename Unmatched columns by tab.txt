@@ -1,4 +1,5 @@
 *** Branch Summary Report ***
+->>>>>> This columns are now ignored
 Brokers Opening Balance
 Upfront Commission - Brokers Incl. GST
 Trail Commission - Brokers Incl. GST

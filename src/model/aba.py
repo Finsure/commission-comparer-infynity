@@ -100,8 +100,6 @@ class ABAFile(TaxInvoice):
                 self.summary_errors.append(error)
             else:
                 for index, value in enumerate(self_row):
-                    if value != pair_row[index]:
-                        print(value, pair_row[index])
                     format_ = None if u.sanitize(value) == u.sanitize(pair_row[index]) else fmt_error
                     worksheet.write(row, index, value, format_)
                     worksheet.write(row, index + col_b, pair_row[index], format_)

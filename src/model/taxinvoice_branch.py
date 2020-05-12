@@ -1405,7 +1405,7 @@ class TaxInvoiceDataRow(InvoiceRow):
         self.amount = float(amount) if amount not in ('', ' ') else 0
         self.gst = float(gst) if gst != '' else 0
         self.total = float(total) if total != '' else 0
-        self.comments = comments.lower()
+        self.comments = str(comments).lower()
 
         self._pair = None
         self._margin = 0
@@ -1558,7 +1558,8 @@ class RCTIDataRow(InvoiceRow):
         InvoiceRow.__init__(self)
 
         self.description = ' '.join(description.strip().split())
-        self.amount = float(amount) if amount != '' and amount != ' ' else 0
+        self.amount = float(u.sanitize(str(amount))) if amount != '' and amount != ' ' else 0
+
         self.gst = float(gst) if gst != '' and gst != ' ' else 0
         self.total = float(total) if total != '' and gst != ' ' else 0
 

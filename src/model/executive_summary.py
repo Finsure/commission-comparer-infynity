@@ -155,18 +155,31 @@ class ExecutiveSummary(TaxInvoice):
                 'VBI Records Incl. GST': 'VBI Commission Incl. GST',
                 'Total Commission': 'Total Commission Received',
                 'ID': 'Branch ID',
-                # 'xxx': 'Brokers Opening Balance',
-                # 'xxx': 'Upfront Commission - Brokers Incl. GST',
-                # 'xxx': 'Trail Commission - Brokers Incl. GST',
-                # 'xxx': 'VBI Commission - Brokers Incl. GST',
-                # 'xxx': 'Fee Charged - Brokers Incl. GST',
-                # 'xxx': 'Total Commission Paid To Brokers Incl. GST',
-                # 'xxx': 'Brokers Closing Balance Incl. GST',
-                # 'xxx': 'Total Commission Paid To Referrers Incl. GST',
-                # 'xxx': 'Amount Retained by Branch Incl. GST',
-                # 'xxx': 'Total Commission Paid To Branch',
+                'Opening CFB': 'Branch Opening Carried Forward Balance'
             }
             df = self.replace_keys(replaces, df)
+
+            columns_to_remove = [
+                'Brokers Opening Carried Forward Balance Incl. GST',
+                'Brokers Upfront Amount Calculated Incl. GST',
+                'Brokers Trail Amount Calculated Incl. GST',
+                'Brokers VBI Amount Calculated Incl. GST',
+                'Brokers Fee Charged Incl. GST',
+                'Brokers Amount Calculated Incl. GST',
+                'Brokers Closing Carried Forward Balance Incl. GST',
+                'Referrers Amount Calculated Incl. GST',
+                'Total Branch Fee Excl. GST',
+                'Total Branch Fee Charge GST',
+                'Total Branch Fee Charge Incl. GST',
+                'Branch Closing Carried Forward Balance Incl. GST',
+                'Amount Retained by Branch Incl. GST',
+                'Total Commission Paid To Branch'
+            ]
+            for column in columns_to_remove:
+                try:
+                    del df[column]
+                except KeyError:
+                    pass
 
             for index, row in df.iterrows():
                 drow = df.loc[df['Branch ID'] == row['Branch ID']].to_dict(orient='records')[0]
@@ -206,7 +219,6 @@ class ExecutiveSummary(TaxInvoice):
                         row['Broker ID'] = 'Total'
                         row['Branch Name'] = 'Total'
                         row['Branch ID'] = 'Total'
-
                     df.loc[index].at['Broker Name'] = row['Broker Name']
                     df.loc[index].at['Broker ID'] = row['Broker ID']
                     df.loc[index].at['Branch Name'] = row['Branch Name']
@@ -217,7 +229,7 @@ class ExecutiveSummary(TaxInvoice):
             replaces = {
                 'Opening Carried Forward Balance': 'Opening Carried Forward Balance Incl. GST',
                 'Total Banked Amount': 'Amount Banked',
-                'Closing Carried Forward Balance': 'Closing Carried Forward Balance Inc GST'
+                'Closing Carried Forward Balance': 'Closing Carried Forward Balance Incl. GST'
             }
             df = self.replace_keys(replaces, df)
 

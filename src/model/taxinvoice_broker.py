@@ -31,7 +31,7 @@ class BrokerTaxInvoice(TaxInvoice):
         dataframe_broker_info = dataframe_info.iloc[2:5, 0:2]
 
         account_info = dataframe_info.iloc[len(dataframe_info.index) - 1][1]
-        account_info_parts = account_info.split(':')
+        account_info_parts = str(account_info).split(':')
 
         bsb = account_info_parts[1].strip().split('/')[0][1:]
 
