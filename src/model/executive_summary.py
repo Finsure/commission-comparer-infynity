@@ -173,7 +173,16 @@ class ExecutiveSummary(TaxInvoice):
                 'Total Branch Fee Charge Incl. GST',
                 'Branch Closing Carried Forward Balance Incl. GST',
                 'Amount Retained by Branch Incl. GST',
-                'Total Commission Paid To Branch'
+                'Total Commission Paid To Branch',
+                'Commission Type Fee Excl. GST',
+                'Commission Type Fee GST',
+                'Commission Type Fee Incl. GST',
+                'Other Fee Types Excl. GST',
+                'Other Fee Types GST',
+                'Other Fee Types Incl. GST',
+                'Commission Type Fee - Other Fee Types Excl. GST',
+                'Commission Type Fee - Other Fee Types GST',
+                'Commission Type Fee - Other Fee Types Incl. GST'
             ]
             for column in columns_to_remove:
                 try:
@@ -202,6 +211,35 @@ class ExecutiveSummary(TaxInvoice):
                 df = df.rename(columns=df.iloc[1]).drop(df.index[0]).drop(df.index[1])  # Make first row the table header
             else:
                 df = df.rename(columns=df.iloc[0]).drop(df.index[0])  # Make first row the table header
+
+            columns_to_remove = [
+                'Commission Amt Excl. GST',
+                'Commission Amt GST',
+                'Commission Amt Incl. GST',
+                'Infynity Fee Excl. GST',
+                'Infynity Fee GST',
+                'Infynity Fee Incl. GST',
+                'Broker Amount Calculated Excl. GST',
+                'Broker Amount Calculated GST',
+                'Broker Amount Calculated Incl. GST',
+                'Fee Charged Excl. GST',
+                'Fee Charged GST',
+                'Fee Charged Incl. GST',
+                'Amount Paid Excl. GST',
+                'Amount Paid GST',
+                'Amount Paid Incl. GST',
+                'Amount Owing Excl. GST',
+                'Amount Owing GST',
+                'Amount Owing Incl. GST',
+                'Total Fee Excl. GST',
+                'Total Fee Charge GST',
+                'Total Fee Charge Incl. GST'
+            ]
+            for column in columns_to_remove:
+                try:
+                    del df[column]
+                except KeyError:
+                    pass
 
             if 'Broker Name (ID)' in list(df):
                 df['Broker Name'] = ''

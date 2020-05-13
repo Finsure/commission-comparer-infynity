@@ -288,9 +288,9 @@ if __name__ == '__main__':
         1,
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/executive_summary/Finsure_ES_Report_17104_Sun_May_10_2020.xls',
         '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/executive_summary/Finsure_ES_Report_6624__Sun_May_10_2020.xlsx')
-    rcti_compare_aba(
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/de_file/Finsure_DE_2020-05-10.txt',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/de_file/Finsure_DE_File_6624__Sun_May_10_2020.txt')
+    # rcti_compare_aba(
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/de_file/Finsure_DE_2020-05-10.txt',
+    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/de_file/Finsure_DE_File_6624__Sun_May_10_2020.txt')
 
 
 # SIMULATE REFERRER
