@@ -312,7 +312,9 @@ class ExecutiveSummary(TaxInvoice):
 
             replaces = {
                 'Finsure BSB No#': 'Aggregator BSB No#',
-                'Finsure Acct No#': 'Aggregator Acct No#'
+                'Finsure Acct No#': 'Aggregator Acct No#',
+                'Loankit BSB No#': 'Aggregator BSB No#',
+                'Loankit Acct No#': 'Aggregator Acct No#'
             }
             df = self.replace_keys(replaces, df)
 

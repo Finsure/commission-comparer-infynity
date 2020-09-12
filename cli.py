@@ -1,6 +1,7 @@
 import os
 
 import click
+import pdb
 import xlsxwriter
 
 from src.model.taxinvoice import (create_dirs, new_error, write_errors, get_header_format,
@@ -231,11 +232,53 @@ def list_files(dir_: str) -> list:
 
 
 if __name__ == '__main__':
-    # rcti()
+    #rcti()
+    #loose = int(input("Enter variance Value\n"))
+    #loankit_process_id = input("Please enter LoanKit Run Date\n")
+    #infynity_process_id = input("Please enter infynity Run Date\n")
+    loose = 1
+    loankit_process_id = "22369"
+    infynity_process_id = "15034_Tue_Jul_14_2020"
+    referrer_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/referrers"""
+    referrer_infynity_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/{infynity_process_id}/referrers"""
+    broker_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/brokers"""
+    broker_infynity_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/{infynity_process_id}/brokers"""
+    branch_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/branch"""
+    branch_infynity_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/{infynity_process_id}/branch"""
+    branch_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/branch"""
+    es_infynity_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/{infynity_process_id}/executive_summary_report"""
+    infynity_es_file = os.listdir(es_infynity_dir)[0]
+    es_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/executive_summary_report"""
+    loankit_es_file = os.listdir(es_loankit_dir)[0]
+    aba_infynity_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/{infynity_process_id}/de_file"""
+    infynity_aba_file = os.listdir(aba_infynity_dir)[0]
+    aba_loankit_dir = f"""/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/{loankit_process_id}/de_file"""
+    loankit_aba_file = os.listdir(aba_loankit_dir)[0]
+    rcti_compare_referrer(
+         loose,
+         referrer_loankit_dir,
+         referrer_infynity_dir)
+    rcti_compare_broker(
+         loose,
+         broker_loankit_dir,
+         broker_infynity_dir)
+    rcti_compare_branch(
+         loose,
+         branch_loankit_dir,
+         branch_infynity_dir)
+    rcti_compare_executive_summary(
+         loose,
+         loankit_es_file,
+         infynity_es_file)
+    rcti_compare_aba(
+         loankit_aba_file,
+         infynity_aba_file)
+
     # rcti_compare_referrer(
-    #     1,
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/15457/referrer/',
-    #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/15457/referrer/')
+    #rcti_compare_referrer(
+         #1,
+         #'/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/loankit/22369/referrers',
+         #'/home/qaisar/rcti_comparison/commission-comparer-infynity/inputs/infynity/3096_Tue_Jul_07_2020/referrers')
     # rcti_compare_broker(
     #     1,
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/15457/broker/',
@@ -284,10 +327,10 @@ if __name__ == '__main__':
     #     1,
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/branch/',
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/branch/')
-    rcti_compare_executive_summary(
-        1,
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/executive_summary/Finsure_ES_Report_17104_Sun_May_10_2020.xls',
-        '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/executive_summary/Finsure_ES_Report_6624__Sun_May_10_2020.xlsx')
+    #rcti_compare_executive_summary(
+        #1,
+        #'/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/executive_summary/Finsure_ES_Report_17104_Sun_May_10_2020.xls',
+        #'/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/executive_summary/Finsure_ES_Report_6624__Sun_May_10_2020.xlsx')
     # rcti_compare_aba(
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/loankit/7127/de_file/Finsure_DE_2020-05-10.txt',
     #     '/Users/petrosschilling/dev/commission-comparer-infynity/inputs/infynity/7127/de_file/Finsure_DE_File_6624__Sun_May_10_2020.txt')

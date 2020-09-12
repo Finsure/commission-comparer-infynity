@@ -1,4 +1,5 @@
 import os
+import pdb
 import numpy
 import hashlib
 
@@ -25,6 +26,7 @@ class BrokerTaxInvoice(TaxInvoice):
         self.parse()
 
     def parse(self):
+        print(self.full_path)
         dataframe = pandas.read_excel(self.full_path)
 
         dataframe_info = dataframe.replace(numpy.nan, '', regex=True)
@@ -32,7 +34,7 @@ class BrokerTaxInvoice(TaxInvoice):
 
         account_info = dataframe_info.iloc[len(dataframe_info.index) - 1][1]
         account_info_parts = str(account_info).split(':')
-
+        #pdb.set_trace()
         bsb = account_info_parts[1].strip().split('/')[0][1:]
 
         account = account_info_parts[1].strip().split('/')[1]
@@ -396,6 +398,7 @@ class BrokerInvoiceRow(InvoiceRow):
         errors = []
         line_a = element.row_number
         description = f"Reference ID: {element.reference_id}"
+        print(description)
         if element.pair is not None:
             line_b = element.pair.row_number
             if write_errors:
@@ -423,6 +426,7 @@ class BrokerInvoiceRow(InvoiceRow):
                     errors.append(new_error(
                         invoice.filename, invoice.pair.filename, 'Total Amount Paid does not match', line_a, line_b, element.comments, element.pair.comments))
         else:
+            #pdb.set_trace()
             if write_errors:
                 errors.append(new_error(invoice.filename, invoice.pair.filename, 'No corresponding row in commission file', line_a, '', value_a=description))
             else:

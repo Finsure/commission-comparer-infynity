@@ -170,7 +170,11 @@ class BranchTaxInvoice(TaxInvoice):
         df = df.dropna(how='all')
         df = df.replace(numpy.nan, '', regex=True)
 
-        self.tax_invoice_from = df.iloc[0][1].strip()
+        print(self.full_path)
+        if df.iloc[0][1]:
+            self.tax_invoice_from = df.iloc[0][1].strip()
+        else:
+            self.tax_invoice_from = ""
         self.tax_invoice_from_abn = df.iloc[1][1].strip()
         self.tax_invoice_to = df.iloc[2][1].strip()
         self.tax_invoice_to_abn = df.iloc[3][1].strip()
@@ -871,7 +875,7 @@ class VBIDataRow(InvoiceRow):
                  paid_to_referrer, retained, document_row=None):
         InvoiceRow.__init__(self)
 
-        self.broker = broker.strip()
+        self.broker = str(broker).strip()
         self.lender = lender.strip()
         self.client = client.strip()
         self.ref_no = str(ref_no).strip().split('.')[0]
@@ -1133,7 +1137,7 @@ class TrailDataRow(InvoiceRow):
                  paid_to_referrer, retained, document_row=None):
         InvoiceRow.__init__(self)
 
-        self.broker = broker.strip()
+        self.broker = str(broker).strip()
         self.lender = lender.strip()
         self.client = client.strip()
         self.ref_no = str(ref_no).strip()
@@ -1556,12 +1560,13 @@ class RCTIDataRow(InvoiceRow):
 
     def __init__(self, description, amount, gst, total, document_row=None):
         InvoiceRow.__init__(self)
+        print(f"""description: {description}, amount:{amount}, gst:{gst}, total: {total}, document_row: {document_row}""")
 
         self.description = ' '.join(description.strip().split())
-        self.amount = float(u.sanitize(str(amount))) if amount != '' and amount != ' ' else 0
+        self.amount = float(u.sanitize(str(amount))) if amount != '' and amount != ' ' and isinstance(amount,int) else 0
 
-        self.gst = float(gst) if gst != '' and gst != ' ' else 0
-        self.total = float(total) if total != '' and gst != ' ' else 0
+        self.gst = float(gst) if gst != '' and gst != ' ' and isinstance(amount,int) else 0
+        self.total = float(total) if total != '' and gst != ' ' and isinstance(amount,int) else 0
 
         self._pair = None
         self._margin = 0
